@@ -1,9 +1,9 @@
 import { Reveal } from "./Reveal";
 
 const metrics = [
-  { value: "100% SECURE", label: "Garantia de integridade e autenticação protegida." },
-  { value: "0% DELEVEL", label: "Histórico impecável de expedições com taxa zero de mortes." },
-  { value: "24/7 ECOSYSTEM", label: "Hub ativo para monitoramento e evolução contínua." },
+  { value: "REFERÊNCIA NO MERCADO", label: "Garantia de integridade e autenticação protegida, mais de 50 referências em todos os grupos de trades." },
+  { value: "MINIMO DE PREJUIZO", label: "Histórico impecável de expedições com taxa minima de mortes." },
+  { value: "ECOSISTEMA ATIVO 24/7", label: "Hub ativo para monitoramento, evolução contínua, atendimento via whatsapp 24/7 e toda a segurança para o seu personagem." },
 ];
 
 export function MetricsStrip() {

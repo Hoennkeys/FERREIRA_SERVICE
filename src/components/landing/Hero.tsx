@@ -25,25 +25,23 @@ export function Hero() {
         <Reveal>
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1 text-[10px] sm:text-xs font-medium tracking-[0.18em] text-white/70">
             <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(0,149,255,0.9)]" />
-            DIVISÃO DE OPERAÇÕES // TIBIA
+            FERREIRA NA VOZ
           </span>
         </Reveal>
 
         <Reveal delay={80}>
-          <h1 className="mt-6 text-balance text-3xl sm:text-5xl md:text-6xl font-semibold tracking-tight text-white leading-[1.05]">
-            INTELIGÊNCIA OPERACIONAL{" "}
+          <h1 className="mt-6 text-balance text-3xl sm:text-5xl md:text-6xl font-semibold tracking-tight text-white uppercase leading-[1.05]">
+            A EVOLUÇÃO DO SEU PERSONAGEM. <br /> ENTREGUE NAS MÃOS DE UM{" "}
             <span className="text-primary drop-shadow-[0_0_25px_rgba(0,149,255,0.5)]">
-              APLICADA
-            </span>{" "}
-            AO SEU PERSONAGEM.
+              ESPECIALISTA.
+            </span>
           </h1>
         </Reveal>
 
         <Reveal delay={160}>
           <p className="mx-auto mt-6 max-w-2xl text-balance text-sm sm:text-base text-white/60 leading-relaxed">
-            A divisão de serviços de alta performance da marca Ferreira na Voz. Escalamos o nível,
-            as conquistas e o rendimento da sua conta em qualquer servidor de Tibia com segurança
-            militar, rastreamento ativo e zero delevel.
+            Todos os serviços de alta performance são oferecidos pela "Ferreira na Voz". Subimos o nível,
+            as conquistas e o rendimento da sua conta em qualquer servidor de Tibia com segurança, rastreamento ativo e referência maxima no mercado.
           </p>
         </Reveal>
 
@@ -53,7 +51,7 @@ export function Hero() {
               href="#pacotes"
               className="group inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_0_40px_rgba(0,149,255,0.45)] transition hover:bg-primary/90 hover:shadow-[0_0_60px_rgba(0,149,255,0.65)]"
             >
-              Agendar Operação Imediata
+              Veja nossos serviços
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
             </a>
           </div>

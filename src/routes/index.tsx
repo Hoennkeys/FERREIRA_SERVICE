@@ -4,6 +4,7 @@ import { Hero } from "@/components/landing/Hero";
 import { MetricsStrip } from "@/components/landing/MetricsStrip";
 import { OperationsDashboard } from "@/components/landing/OperationsDashboard";
 import { Pricing } from "@/components/landing/Pricing";
+import { About } from "@/components/landing/About";
 import { Footer } from "@/components/landing/Footer";
 import { StickyMobileCTA } from "@/components/landing/StickyMobileCTA";
 
@@ -39,6 +40,7 @@ function Index() {
         <MetricsStrip />
         <OperationsDashboard />
         <Pricing />
+        <About />
       </main>
       <Footer />
       <StickyMobileCTA />
