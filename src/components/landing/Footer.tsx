@@ -28,7 +28,9 @@ export function Footer() {
         </div>
       </footer>
 
-      <DispatchPanel open={dispatchOpen} onClose={() => setDispatchOpen(false)} />
+      {dispatchOpen && (
+        <DispatchPanel open={dispatchOpen} onClose={() => setDispatchOpen(false)} />
+      )}
     </>
   );
 }
