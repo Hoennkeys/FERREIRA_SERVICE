@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { ExternalLink } from "lucide-react";
+import { parseTelemetry, type Telemetry } from "@/lib/schemas/telemetry";
 import { Reveal } from "./Reveal";
 
 const TWITCH_URL = "https://twitch.tv/ferreiranavoz";
 const START = Date.now();
+const INITIAL_TELEMETRY: Telemetry = {
+  uptime: "00:00:00",
+  xph: 2_450_000,
+  deaths: 0,
+};
 
 function formatUptime(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -14,13 +20,18 @@ function formatUptime(ms: number) {
 }
 
 export function OperationsDashboard() {
-  const [uptime, setUptime] = useState("00:00:00");
-  const [xph, setXph] = useState(2_450_000);
+  const [telemetry, setTelemetry] = useState<Telemetry>(INITIAL_TELEMETRY);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setUptime(formatUptime(Date.now() - START));
-      setXph((v) => v + Math.floor((Math.random() - 0.4) * 3000));
+      setTelemetry((prev) => {
+        const candidate = {
+          uptime: formatUptime(Date.now() - START),
+          xph: prev.xph + Math.floor((Math.random() - 0.4) * 3000),
+          deaths: prev.deaths,
+        };
+        return parseTelemetry(candidate) ?? prev;
+      });
     }, 1000);
     return () => clearInterval(id);
   }, []);
@@ -61,13 +72,13 @@ export function OperationsDashboard() {
 
             {/* Body grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
-              <Stat label="UPTIME" value={uptime} mono />
+              <Stat label="UPTIME" value={telemetry.uptime} mono />
               <Stat
                 label="XP / HOUR"
-                value={xph.toLocaleString("pt-BR")}
+                value={telemetry.xph.toLocaleString("pt-BR")}
                 accent
               />
-              <Stat label="DEATHS" value="0" />
+              <Stat label="DEATHS" value={String(telemetry.deaths)} />
             </div>
 
             {/* Chart */}
