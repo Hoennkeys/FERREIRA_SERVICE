@@ -5,126 +5,52 @@ const root = process.cwd();
 const dist = join(root, "dist");
 const output = join(root, ".vercel", "output");
 
-// Garante que a pasta client exista
-if (!existsSync(join(dist, "client"))) {
-  console.error("Missing dist/client — run `npm run build` first.");
+// 1. Limpa e cria as pastas de saída da Vercel
+try {
+  if (existsSync(output)) rmSync(output, { recursive: true, force: true });
+  mkdirSync(join(output, "static"), { recursive: true });
+} catch (e) {
+  console.error("Erro ao preparar pastas:", e.message);
+}
+
+// 2. Copia os arquivos do build do cliente
+const clientDist = join(dist, "client");
+if (existsSync(clientDist)) {
+  cpSync(clientDist, join(output, "static"), { recursive: true });
+} else {
+  console.error("ERRO: Pasta dist/client não encontrada!");
   process.exit(1);
 }
 
-function readRootAssets() {
-  const cssPaths = [];
-  let jsPaths = [];
-
-  const clientDir = join(dist, "client");
-  const assetsDir = join(clientDir, "assets");
-
-  // 1. Vasculha arquivos de estilo na raiz do client (Padrão Tailwind v4)
-  if (existsSync(clientDir)) {
-    try {
-      const rootFiles = readdirSync(clientDir);
-      rootFiles.forEach(file => {
-        if (file.endsWith(".css")) cssPaths.push(`/${file}`);
-      });
-    } catch (e) {
-      console.log("Aviso ao ler clientDir:", e.message);
-    }
-  }
-
-  // 2. Vasculha arquivos na pasta assets (Padrão Vite tradicional)
-  if (existsSync(assetsDir)) {
-    try {
-      const assetsFiles = readdirSync(assetsDir);
-      assetsFiles.forEach(file => {
-        if (file.endsWith(".css")) cssPaths.push(`/assets/${file}`);
-        if (file.endsWith(".js")) jsPaths.push(`/assets/${file}`);
-      });
-    } catch (e) {
-      console.log("Aviso ao ler assetsDir:", e.message);
-    }
-  }
-
-  // Se por algum motivo o build não gerou arquivos conhecidos, força o fallback seguro
-  if (cssPaths.length === 0) {
-    cssPaths.push("/styles.css");
-  }
-
-  const js = jsPaths.sort((a, b) => b.length - a.length).slice(0, 1);
-
-  return {
-    css: [...new Set(cssPaths)],
-    preloads: js,
-    scripts: js,
-  };
-}
-
-function buildIndexHtml({ css, preloads, scripts }) {
-  const stylesheetTags = css
-    .map((href) => `    <link rel="stylesheet" crossorigin href="${href}">`)
-    .join("\n");
-  const preloadTags = preloads
-    .filter((href) => !scripts.includes(href))
-    .map((href) => `    <link rel="modulepreload" crossorigin href="${href}">`)
-    .join("\n");
-  const scriptTags = scripts
-    .map((src) => `    <script type="module" crossorigin src="${src}"></script>`)
-    .join("\n");
-
-  return `<!DOCTYPE html>
+// 3. Define o HTML básico com o fix de hidratação para o TanStack Router
+const indexHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ferreira na Voz // Services</title>
-    <meta name="description" content="Divisão de serviços premium da Ferreira na Voz. Escale level, conquistas e rendimento da sua conta de Tibia com segurança militar e zero delevel." />
-    <script type="module">
-      window.__TSR_DEHYDRATED__ = { data: {} };
-    </script>
-${stylesheetTags}
-${preloadTags}
-${scriptTags}
+    <script type="module">window.__TSR_DEHYDRATED__ = { data: {} };</script>
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/assets/index.js"></script>
   </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
-`;
-}
+  <body><div id="root"></div></body>
+</html>`;
 
-// Execução do script de saída da Vercel
+// 4. Salva o index.html e a configuração de rotas da Vercel
 try {
-  rmSync(output, { recursive: true, force: true });
-  mkdirSync(join(output, "static"), { recursive: true });
-
-  cpSync(join(dist, "client"), join(output, "static"), { recursive: true });
-
-  const assets = readRootAssets();
-  writeFileSync(join(output, "static", "index.html"), buildIndexHtml(assets));
-
+  writeFileSync(join(output, "static", "index.html"), indexHtml);
   writeFileSync(
     join(output, "config.json"),
-    JSON.stringify(
-      {
-        version: 3,
-        routes: [
-          {
-            headers: { "cache-control": "public, max-age=31536000, immutable" },
-            src: "/assets/(.*)",
-          },
-          {
-            headers: { "cache-control": "public, max-age=31536000, immutable" },
-            src: "/(.*).css",
-          },
-          { handle: "filesystem" },
-          { src: "/(.*)", dest: "/index.html" },
-        ],
-      },
-      null,
-      2,
-    ),
+    JSON.stringify({
+      version: 3,
+      routes: [
+        { handle: "filesystem" },
+        { src: "/(.*)", dest: "/index.html" }
+      ]
+    }, null, 2)
   );
-
-  console.log("Successfully prepared .vercel/output with crash protection!");
-} catch (error) {
-  console.error("Erro crítico ao preparar saída da Vercel:", error);
+  console.log("Build concluído com sucesso!");
+} catch (e) {
+  console.error("Erro ao gravar arquivos finais:", e.message);
   process.exit(1);
 }
