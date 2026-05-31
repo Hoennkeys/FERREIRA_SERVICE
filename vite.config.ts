@@ -9,8 +9,14 @@ import tsconfigPaths from "vite-tsconfig-paths";
 /** Local dev/preview port only — production on Vercel is unaffected. */
 const DEV_PORT = 5173;
 
-export default defineConfig({
-  plugins: [tanstackStart(), nitro({ preset: "vercel" }), react(), tailwindcss(), tsconfigPaths()],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    tanstackStart(),
+    ...(command === "build" ? [nitro({ preset: "vercel" })] : []),
+    react(),
+    tailwindcss(),
+    tsconfigPaths(),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -19,10 +25,17 @@ export default defineConfig({
   server: {
     host: true,
     port: DEV_PORT,
-    strictPort: true,
+    strictPort: false,
+    // Prevent vercel-build output from hijacking the dev server / HMR reload.
+    fs: {
+      deny: [".vercel", "dist"],
+    },
+    watch: {
+      ignored: ["**/.vercel/**", "**/dist/**"],
+    },
   },
   preview: {
     port: DEV_PORT,
-    strictPort: true,
+    strictPort: false,
   },
-});
+}));

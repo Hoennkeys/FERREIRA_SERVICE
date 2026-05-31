@@ -18,32 +18,48 @@ function readRootAssets() {
 
   if (manifestFile) {
     const source = readFileSync(join(manifestDir, manifestFile), "utf8");
-    const css = [...source.matchAll(/css:\s*\["([^"]+)"\]/g)].map((match) => match[1]);
-    const scripts = [...source.matchAll(/src:\s*"([^"]+\.js)"/g)].map((match) => match[1]);
-    const rootScript = scripts.find((file) => file.includes("/assets/index-")) ?? scripts[0];
+    const css = [...source.matchAll(/"(\/assets\/[^"]+\.css)"/g)].map((match) => match[1]);
+    const scripts = [...source.matchAll(/src:\s*"(\/assets\/[^"]+\.js)"/g)].map((match) => match[1]);
+    const preloads = [...source.matchAll(/preloads:\s*\["(\/assets\/[^"]+\.js)"/g)].map((match) => match[1]);
 
-    if (rootScript) {
-      return { css: [...new Set(css)], scripts: [rootScript] };
+    const rootMatch = source.match(/__root__:\s*\{[\s\S]*?preloads:\s*\["(\/assets\/[^"]+\.js)"/);
+    const mainScript = rootMatch?.[1] ?? preloads[0] ?? scripts[0];
+
+    if (mainScript || css.length > 0) {
+      return {
+        css: [...new Set(css.filter((file) => file.endsWith(".css")))],
+        preloads: [],
+        scripts: mainScript ? [mainScript] : [],
+      };
     }
   }
 
   const assetsDir = join(dist, "client", "assets");
   const files = readdirSync(assetsDir);
-  const css = files.filter((file) => file.startsWith("index-") && file.endsWith(".css")).map((file) => `/assets/${file}`);
-  const js = files.find((file) => file.startsWith("index-") && file.endsWith(".js"));
+  const css = files.filter((file) => file.endsWith(".css")).map((file) => `/assets/${file}`);
+  const js = files
+    .filter((file) => file.endsWith(".js"))
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 1)
+    .map((file) => `/assets/${file}`);
 
   return {
     css,
-    scripts: js ? [`/assets/${js}`] : [],
+    preloads: js,
+    scripts: js,
   };
 }
 
-function buildIndexHtml({ css, scripts }) {
+function buildIndexHtml({ css, preloads, scripts }) {
   const stylesheetTags = css
     .map((href) => `    <link rel="stylesheet" crossorigin href="${href}">`)
     .join("\n");
+  const preloadTags = preloads
+    .filter((href) => !scripts.includes(href))
+    .map((href) => `    <link rel="modulepreload" crossorigin href="${href}">`)
+    .join("\n");
   const scriptTags = scripts
-    .map((src) => `    <script type="module" crossorigin async src="${src}"></script>`)
+    .map((src) => `    <script type="module" crossorigin src="${src}"></script>`)
     .join("\n");
 
   return `<!DOCTYPE html>
@@ -54,6 +70,7 @@ function buildIndexHtml({ css, scripts }) {
     <title>Ferreira na Voz // Services</title>
     <meta name="description" content="Divisão de serviços premium da Ferreira na Voz. Escale level, conquistas e rendimento da sua conta de Tibia com segurança militar e zero delevel." />
 ${stylesheetTags}
+${preloadTags}
 ${scriptTags}
   </head>
   <body>
