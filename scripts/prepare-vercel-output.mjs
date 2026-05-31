@@ -76,6 +76,9 @@ function buildIndexHtml({ css, preloads, scripts }) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ferreira na Voz // Services</title>
     <meta name="description" content="Divisão de serviços premium da Ferreira na Voz. Escale level, conquistas e rendimento da sua conta de Tibia com segurança militar e zero delevel." />
+    <script type="module">
+      window.__TSR_DEHYDRATED__ = { data: {} };
+    </script>
 ${stylesheetTags}
 ${preloadTags}
 ${scriptTags}
