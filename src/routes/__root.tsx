@@ -9,8 +9,6 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
 import { reportLovableError } from '../lib/lovable-error-reporting'
-
-// Voltamos ao import tradicional que funcionou perfeitamente localmente
 import '../styles.css'
 
 function NotFoundComponent() {
