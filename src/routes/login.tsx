@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getActiveSession } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const loginSearchSchema = z.object({
   redirect: z.string().optional(),
@@ -30,9 +30,7 @@ function LoginPage() {
   const [envMisconfigured, setEnvMisconfigured] = useState(false);
 
   useEffect(() => {
-    const placeholderUrl = import.meta.env.VITE_SUPABASE_URL?.includes("your-project") ?? true;
-    const placeholderKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.includes("your-anon-key") ?? true;
-    setEnvMisconfigured(placeholderUrl || placeholderKey);
+    setEnvMisconfigured(!isSupabaseConfigured());
 
     let mounted = true;
 

@@ -1,7 +1,8 @@
 import { createRootRouteWithContext, Outlet, Link, useRouter } from '@tanstack/react-router'
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { reportLovableError } from '../lib/lovable-error-reporting'
+import '../styles.css'
 
 function NotFoundComponent() {
   return (
@@ -63,8 +64,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   )
 }
 
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext()
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+    </QueryClientProvider>
+  )
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  component: () => <Outlet />,
+  component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 })
