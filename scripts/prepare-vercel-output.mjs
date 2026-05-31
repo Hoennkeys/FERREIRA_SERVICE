@@ -1,89 +1,52 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
-const dist = join(root, "dist");
-const output = join(root, ".vercel", "output");
+// O TanStack Start joga os arquivos direto aqui durante o build da Vercel
+const staticDir = join(root, ".vercel", "output", "static");
+const configPath = join(root, ".vercel", "output", "config.json");
 
-if (!existsSync(join(dist, "client"))) {
-  console.error("Missing dist/client — run `npm run build` first.");
+if (!existsSync(staticDir)) {
+  console.error("ERRO: Pasta static não encontrada em .vercel/output/static");
   process.exit(1);
 }
 
-function readRootAssets() {
-  const assetsDir = join(dist, "client", "assets");
-  const files = readdirSync(assetsDir);
-  const css = files.filter((file) => file.endsWith(".css")).map((file) => `/assets/${file}`);
-  const js = files
-    .filter((file) => file.endsWith(".js"))
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 1)
-    .map((file) => `/assets/${file}`);
+// 1. Identifica os arquivos de CSS e JS gerados
+const assetsDir = join(staticDir, "assets");
+const files = existsSync(assetsDir) ? readdirSync(assetsDir) : [];
 
-  return {
-    css,
-    preloads: js,
-    scripts: js,
-  };
-}
+const cssFile = files.find(f => f.endsWith('.css'));
+const jsFile = files.find(f => f.endsWith('.js') && f.startsWith('index-'));
 
-function buildIndexHtml({ css, preloads, scripts }) {
-  const stylesheetTags = css
-    .map((href) => `    <link rel="stylesheet" crossorigin href="${href}">`)
-    .join("\n");
-  const preloadTags = preloads
-    .filter((href) => !scripts.includes(href))
-    .map((href) => `    <link rel="modulepreload" crossorigin href="${href}">`)
-    .join("\n");
-  const scriptTags = scripts
-    .map((src) => `    <script type="module" crossorigin src="${src}"></script>`)
-    .join("\n");
-
-  return `<!DOCTYPE html>
+// 2. Cria o HTML corrigindo o caminho dos assets e injetando o fix de hidratação
+const indexHtml = `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ferreira na Voz // Services</title>
-    <meta name="description" content="Divisão de serviços premium da Ferreira na Voz. Escale level, conquistas e rendimento da sua conta de Tibia com segurança militar e zero delevel." />
-${stylesheetTags}
-${preloadTags}
-${scriptTags}
+    <script type="module">window.__TSR_DEHYDRATED__ = { data: {} };</script>
+    ${cssFile ? `<link rel="stylesheet" href="/assets/${cssFile}">` : ''}
+    ${jsFile ? `<script type="module" src="/assets/${jsFile}"></script>` : ''}
   </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
-`;
+  <body><div id="root"></div></body>
+</html>`;
+
+// 3. Salva o arquivo e garante a configuração de rotas
+try {
+  writeFileSync(join(staticDir, "index.html"), indexHtml);
+  
+  const config = {
+    version: 3,
+    routes: [
+      { handle: "filesystem" },
+      { src: "/(.*)", dest: "/index.html" }
+    ]
+  };
+  
+  writeFileSync(configPath, JSON.stringify(config, null, 2));
+  console.log("✅ Build finalizado com sucesso e assets mapeados!");
+} catch (e) {
+  console.error("Erro ao finalizar build:", e.message);
+  process.exit(1);
 }
-
-rmSync(output, { recursive: true, force: true });
-mkdirSync(join(output, "static"), { recursive: true });
-
-cpSync(join(dist, "client"), join(output, "static"), { recursive: true });
-
-const assets = readRootAssets();
-writeFileSync(join(output, "static", "index.html"), buildIndexHtml(assets));
-
-writeFileSync(
-  join(output, "config.json"),
-  JSON.stringify(
-    {
-      version: 3,
-      routes: [
-        {
-          headers: {
-            "cache-control": "public, max-age=31536000, immutable",
-          },
-          src: "/assets/(.*)",
-        },
-        { handle: "filesystem" },
-        { src: "/(.*)", dest: "/index.html" },
-      ],
-    },
-    null,
-    2,
-  ),
-);
-
-console.log("Prepared .vercel/output for static SPA deploy");
