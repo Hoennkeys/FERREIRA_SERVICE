@@ -12,9 +12,13 @@ if (!existsSync(join(dist, "client"))) {
 
 function readRootAssets() {
   const manifestDir = join(dist, "server");
-  const manifestFile = readdirSync(manifestDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.startsWith("_tanstack-start-manifest_v-"))
-    .map((entry) => entry.name)[0];
+  let manifestFile = null;
+  
+  if (existsSync(manifestDir)) {
+    manifestFile = readdirSync(manifestDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.startsWith("_tanstack-start-manifest_v-"))
+      .map((entry) => entry.name)[0];
+  }
 
   if (manifestFile) {
     const source = readFileSync(join(manifestDir, manifestFile), "utf8");
@@ -34,17 +38,35 @@ function readRootAssets() {
     }
   }
 
-  const assetsDir = join(dist, "client", "assets");
-  const files = readdirSync(assetsDir);
-  const css = files.filter((file) => file.endsWith(".css")).map((file) => `/assets/${file}`);
-  const js = files
-    .filter((file) => file.endsWith(".js"))
+  // --- CORREÇÃO AQUI: Busca robusta de CSS e JS ---
+  const cssPaths = [];
+  const clientDir = join(dist, "client");
+  const assetsDir = join(clientDir, "assets");
+
+  // 1. Procura CSS na raiz do client (onde o Tailwind v4 costuma jogar o styles.css)
+  if (existsSync(clientDir)) {
+    const rootFiles = readdirSync(clientDir);
+    rootFiles.forEach(file => {
+      if (file.endsWith(".css")) cssPaths.push(`/${file}`);
+    });
+  }
+
+  // 2. Procura CSS e JS dentro da pasta assets
+  let jsPaths = [];
+  if (existsSync(assetsDir)) {
+    const assetsFiles = readdirSync(assetsDir);
+    assetsFiles.forEach(file => {
+      if (file.endsWith(".css")) cssPaths.push(`/assets/${file}`);
+      if (file.endsWith(".js")) jsPaths.push(`/assets/${file}`);
+    });
+  }
+
+  const js = jsPaths
     .sort((a, b) => b.length - a.length)
-    .slice(0, 1)
-    .map((file) => `/assets/${file}`);
+    .slice(0, 1);
 
   return {
-    css,
+    css: [...new Set(cssPaths)], // Evita caminhos duplicados
     preloads: js,
     scripts: js,
   };
@@ -100,6 +122,13 @@ writeFileSync(
           },
           src: "/assets/(.*)",
         },
+        // Configuração para garantir cache também nos arquivos CSS que ficarem na raiz do build
+        {
+          headers: {
+            "cache-control": "public, max-age=31536000, immutable",
+          },
+          src: "/(.*).css",
+        },
         { handle: "filesystem" },
         { src: "/(.*)", dest: "/index.html" },
       ],
@@ -109,4 +138,4 @@ writeFileSync(
   ),
 );
 
-console.log("Prepared .vercel/output for static SPA deploy");
+console.log("Prepared .vercel/output for static SPA deploy with Tailwind v4 support");
