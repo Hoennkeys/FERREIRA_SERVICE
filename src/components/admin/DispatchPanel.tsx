@@ -294,13 +294,13 @@ export function DispatchPanel({
   open: boolean;
   onClose: () => void;
 }) {
-  const [message, setMessage] = useState(loadMessage);
-  const [flyerUrl, setFlyerUrl] = useState(loadFlyerUrl);
-  const [debouncedFlyerUrl, setDebouncedFlyerUrl] = useState(loadFlyerUrl);
+  const [message, setMessage] = useState(() => loadMessage());
+  const [flyerUrl, setFlyerUrl] = useState(() => loadFlyerUrl());
+  const [debouncedFlyerUrl, setDebouncedFlyerUrl] = useState(() => loadFlyerUrl());
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [flyerStatus, setFlyerStatus] = useState<FlyerStatus>("idle");
   const [flyerPreviewError, setFlyerPreviewError] = useState(false);
-  const [groups, setGroups] = useState<DispatchGroup[]>(loadGroups);
+  const [groups, setGroups] = useState<DispatchGroup[]>(() => loadGroups());
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
   const [copiedFlyerId, setCopiedFlyerId] = useState<string | null>(null);
@@ -311,6 +311,7 @@ export function DispatchPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hydrateRunRef = useRef(0);
   const uploadInProgressRef = useRef(false);
+  const storageReadyRef = useRef(false);
   const previewUrlRef = useRef<string | null>(null);
 
   const previewSrc = previewBlobUrl || flyerUrl.trim() || "";
@@ -351,6 +352,11 @@ export function DispatchPanel({
   }, [onClose]);
 
   useEffect(() => {
+    storageReadyRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!storageReadyRef.current) return;
     try {
       localStorage.setItem(STORAGE_MESSAGE, message);
     } catch {
@@ -359,6 +365,7 @@ export function DispatchPanel({
   }, [message]);
 
   useEffect(() => {
+    if (!storageReadyRef.current) return;
     try {
       localStorage.setItem(STORAGE_FLYER, flyerUrl);
     } catch {
@@ -367,6 +374,7 @@ export function DispatchPanel({
   }, [flyerUrl]);
 
   useEffect(() => {
+    if (!storageReadyRef.current) return;
     try {
       localStorage.setItem(STORAGE_GROUPS, JSON.stringify(groups));
     } catch {
