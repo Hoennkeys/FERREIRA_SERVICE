@@ -1,4 +1,3 @@
 {
-  "buildCommand": "npm run vercel-build",
-  "ignoreCommand": "exit 1"
+  "buildCommand": "npm run vercel-build"
 }
