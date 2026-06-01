@@ -1,4 +1,5 @@
 {
-  "buildCommand": "npm run vercel-build",
-  "framework": null
+  "framework": "nitro",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".vercel/output"
 }
