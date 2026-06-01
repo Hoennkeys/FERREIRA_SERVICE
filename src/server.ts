@@ -39,21 +39,11 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
-    // #region agent log
-    console.log('[debug-7b787a] SSR fetch called', request.method, request.url);
-    // #endregion
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      const normalised = await normalizeCatastrophicSsrResponse(response);
-      // #region agent log
-      console.log('[debug-7b787a] SSR response status', normalised.status, 'content-type:', normalised.headers.get('content-type'));
-      // #endregion
-      return normalised;
+      return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
-      // #region agent log
-      console.error('[debug-7b787a] SSR catch error', String(error));
-      // #endregion
       console.error(error);
       return new Response(renderErrorPage(), {
         status: 500,
