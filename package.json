@@ -7,6 +7,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "vercel-build": "vite build && node scripts/prepare-vercel-output.mjs",
+    "deploy": "npm run build && node scripts/prepare-vercel-output.mjs && npx vercel deploy --prebuilt --prod --yes",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
