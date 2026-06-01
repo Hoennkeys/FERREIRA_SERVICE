@@ -5,15 +5,20 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { X, Trash2, Image, CopyCheck, Upload, ListOrdered, AlertTriangle, MessageSquare } from "lucide-react";
+import { X, Trash2, Image, CopyCheck, Upload, ListOrdered, AlertTriangle, MessageSquare, Lock, Timer } from "lucide-react";
 import {
   clearFlyerPng,
   loadFlyerPng,
   saveFlyerPng,
 } from "@/lib/dispatch-flyer-store";
+import {
+  dispatchQueueStore,
+  useDispatchQueue,
+  type WhatsAppGroup,
+} from "@/lib/dispatch-queue";
+import { useCooldownTimer } from "@/hooks/use-cooldown-timer";
 
 const STORAGE_MESSAGE = "ferreira-dispatch-message";
-const STORAGE_GROUPS = "ferreira-dispatch-groups";
 const STORAGE_FLYER = "ferreira-dispatch-flyer-url";
 const STORAGE_FLYER_B64 = "ferreira-dispatch-flyer-b64";
 
@@ -23,12 +28,6 @@ const FETCH_TIMEOUT_MS = 8_000;
 const RESOLVE_TIMEOUT_MS = 15_000;
 const CANVAS_ENCODE_TIMEOUT_MS = 30_000;
 const IMAGE_LOAD_TIMEOUT_MS = 12_000;
-
-type DispatchGroup = {
-  id: string;
-  name: string;
-  link: string;
-};
 
 type DispatchToast = {
   id: number;
@@ -59,17 +58,6 @@ function loadLegacyFlyerB64(): string {
     return localStorage.getItem(STORAGE_FLYER_B64) ?? "";
   } catch {
     return "";
-  }
-}
-
-function loadGroups(): DispatchGroup[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_GROUPS);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as DispatchGroup[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
   }
 }
 
@@ -278,15 +266,6 @@ async function copyTextOnly(text: string): Promise<boolean> {
   }
 }
 
-function rotateGroupToEnd(groups: DispatchGroup[], id: string): DispatchGroup[] {
-  const idx = groups.findIndex((g) => g.id === id);
-  if (idx === -1) return groups;
-  const next = [...groups];
-  const [item] = next.splice(idx, 1);
-  next.push(item);
-  return next;
-}
-
 export function DispatchPanel({
   open,
   onClose,
@@ -300,11 +279,15 @@ export function DispatchPanel({
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [flyerStatus, setFlyerStatus] = useState<FlyerStatus>("idle");
   const [flyerPreviewError, setFlyerPreviewError] = useState(false);
-  const [groups, setGroups] = useState<DispatchGroup[]>(() => loadGroups());
+  const queue = useDispatchQueue();
+  const groups = [...queue.groups].sort((a, b) => a.order - b.order);
+  const cooldownTick = useCooldownTimer(queue.cooldown.ends_at);
+  const cooldownActive = queue.cooldown.is_active && !cooldownTick.isExpired;
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
-  const [copiedFlyerId, setCopiedFlyerId] = useState<string | null>(null);
-  const [copiedTextId, setCopiedTextId] = useState<string | null>(null);
+  const [cooldownMinutesInput, setCooldownMinutesInput] = useState(
+    String(queue.cooldown_minutes),
+  );
   const [toast, setToast] = useState<DispatchToast | null>(null);
 
   const flyerPngRef = useRef<Blob | null>(null);
@@ -374,13 +357,8 @@ export function DispatchPanel({
   }, [flyerUrl]);
 
   useEffect(() => {
-    if (!storageReadyRef.current) return;
-    try {
-      localStorage.setItem(STORAGE_GROUPS, JSON.stringify(groups));
-    } catch {
-      /* ignore */
-    }
-  }, [groups]);
+    setCooldownMinutesInput(String(queue.cooldown_minutes));
+  }, [queue.cooldown_minutes]);
 
   useEffect(() => {
     setFlyerPreviewError(false);
@@ -545,38 +523,42 @@ export function DispatchPanel({
     const trimmedLink = link.trim();
     if (!trimmedName || !trimmedLink) return;
 
-    setGroups((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), name: trimmedName, link: trimmedLink },
-    ]);
+    void dispatchQueueStore.addGroup({ name: trimmedName, url: trimmedLink });
     setName("");
     setLink("");
   };
 
-  const onCopyFlyer = async (group: DispatchGroup) => {
+  const onCopyFlyer = async (group: WhatsAppGroup) => {
     const ok = await copyFlyerOnly(flyerPngRef.current);
     showFlyerToast(ok);
 
-    setCopiedFlyerId(group.id);
-    setTimeout(() => setCopiedFlyerId(null), 2000);
-
     if (ok) {
-      setGroups((prev) => rotateGroupToEnd(prev, group.id));
+      void dispatchQueueStore.markFlyer(group.id);
     }
 
-    window.open(group.link, "_blank", "noopener,noreferrer");
+    window.open(group.url, "_blank", "noopener,noreferrer");
   };
 
-  const onCopyText = async (group: DispatchGroup) => {
+  const onCopyText = async (group: WhatsAppGroup) => {
     const ok = await copyTextOnly(message);
     showTextToast(ok);
 
-    setCopiedTextId(group.id);
-    setTimeout(() => setCopiedTextId(null), 2000);
+    if (ok) {
+      void dispatchQueueStore.markText(group.id);
+    }
   };
 
   const onRemoveGroup = (id: string) => {
-    setGroups((prev) => prev.filter((g) => g.id !== id));
+    void dispatchQueueStore.removeGroup(id);
+  };
+
+  const onCommitCooldownMinutes = () => {
+    const parsed = Number(cooldownMinutesInput.replace(/\D/g, ""));
+    void dispatchQueueStore.setCooldownMinutes(parsed);
+  };
+
+  const onCancelCooldown = () => {
+    void dispatchQueueStore.cancelCooldown();
   };
 
   const hasUploadedFlyer = flyerStatus === "ready" && Boolean(previewBlobUrl);
@@ -666,14 +648,50 @@ export function DispatchPanel({
           </div>
           <div className="flex items-center gap-2.5">
             <span
-              className="h-2 w-2 rounded-full bg-green-400"
+              className={`h-2 w-2 rounded-full ${cooldownActive ? "bg-amber-400" : "bg-green-400"}`}
               style={{ animation: "pulse-dot 2s ease-in-out infinite" }}
             />
-            <span className="text-[10px] sm:text-xs font-medium tracking-[0.18em] text-green-400">
-              ● SISTEMA DE DESPACHO PRONTO
+            <span
+              className={`text-[10px] sm:text-xs font-medium tracking-[0.18em] ${
+                cooldownActive ? "text-amber-400" : "text-green-400"
+              }`}
+            >
+              {cooldownActive
+                ? `◌ COOLDOWN ${cooldownTick.clock}`
+                : "● SISTEMA DE DESPACHO PRONTO"}
             </span>
           </div>
         </div>
+
+        {cooldownActive && (
+          <div
+            className="absolute inset-0 z-[8] flex items-center justify-center rounded-t-2xl sm:rounded-2xl bg-black/85 backdrop-blur-md px-6"
+            style={{ animation: "fade-up 0.3s ease-out" }}
+          >
+            <div className="glass rounded-2xl border-amber-400/30 px-6 py-8 sm:px-10 sm:py-10 text-center shadow-[0_0_60px_rgba(251,191,36,0.18)] max-w-sm">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/10">
+                <Lock className="h-5 w-5 text-amber-400" />
+              </div>
+              <p className="mt-4 text-[10px] tracking-[0.22em] text-amber-400">
+                TRAVA ANTI-BAN ATIVA
+              </p>
+              <p className="mt-2 text-sm text-white/55 leading-relaxed">
+                Rodada de despacho concluída. Aguarde o cooldown para iniciar a
+                próxima leva de mensagens.
+              </p>
+              <div className="mt-5 font-mono tabular-nums text-4xl sm:text-5xl font-semibold text-amber-300 drop-shadow-[0_0_18px_rgba(251,191,36,0.4)]">
+                {cooldownTick.clock}
+              </div>
+              <button
+                type="button"
+                onClick={onCancelCooldown}
+                className="mt-6 inline-flex items-center justify-center rounded-full border border-white/15 bg-white/[0.03] px-5 py-2 text-[10px] font-semibold tracking-[0.14em] text-white/50 transition hover:border-white/25 hover:text-white/80"
+              >
+                CANCELAR COOLDOWN
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="flex flex-col gap-5">
@@ -823,6 +841,27 @@ export function DispatchPanel({
                 // 1) copie o flyer e cole no grupo · 2) copie o texto e cole em seguida
               </p>
 
+              <div className="mb-3 flex items-end gap-2 rounded-lg border border-white/5 bg-black/30 px-3 py-2.5">
+                <label className="flex-1 block">
+                  <span className="flex items-center gap-1.5 text-[10px] tracking-[0.18em] text-white/50">
+                    <Timer className="h-3 w-3 text-primary" />
+                    COOLDOWN ANTI-BAN (MIN)
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={cooldownMinutesInput}
+                    onChange={(e) => setCooldownMinutesInput(e.target.value)}
+                    onBlur={onCommitCooldownMinutes}
+                    placeholder="120"
+                    className="mt-1.5 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 font-mono text-sm text-white placeholder:text-white/25 outline-none transition focus:border-primary/60 focus:shadow-[0_0_20px_rgba(0,149,255,0.2)]"
+                  />
+                </label>
+                <p className="pb-2 font-mono text-[9px] text-white/30">
+                  trava a fila ao concluir a rodada
+                </p>
+              </div>
+
               {groups.length === 0 ? (
                 <p className="text-xs text-white/30 font-mono py-6 text-center">
                   // nenhum grupo cadastrado
@@ -860,7 +899,7 @@ export function DispatchPanel({
                               )}
                             </div>
                             <div className="font-mono text-[10px] text-white/35 truncate mt-0.5">
-                              {group.link}
+                              {group.url}
                             </div>
                           </div>
                         </div>
@@ -868,18 +907,26 @@ export function DispatchPanel({
                           <button
                             type="button"
                             onClick={() => onCopyFlyer(group)}
-                            className="inline-flex items-center justify-center gap-1 rounded-lg bg-green-500/15 border border-green-400/30 px-2.5 py-2 text-[9px] font-semibold tracking-[0.08em] text-green-400 transition hover:bg-green-500/25 hover:shadow-[0_0_16px_rgba(34,197,94,0.3)]"
+                            className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-[9px] font-semibold tracking-[0.08em] transition ${
+                              group.flyer_clicked
+                                ? "bg-green-500/30 border-green-400/60 text-green-300 shadow-[0_0_16px_rgba(34,197,94,0.3)]"
+                                : "bg-green-500/15 border-green-400/30 text-green-400 hover:bg-green-500/25 hover:shadow-[0_0_16px_rgba(34,197,94,0.3)]"
+                            }`}
                           >
                             <Image className="h-3 w-3" />
-                            {copiedFlyerId === group.id ? "✓ FLYER" : "🖼 FLYER"}
+                            {group.flyer_clicked ? "✓ FLYER" : "🖼 FLYER"}
                           </button>
                           <button
                             type="button"
                             onClick={() => onCopyText(group)}
-                            className="inline-flex items-center justify-center gap-1 rounded-lg bg-primary/10 border border-primary/30 px-2.5 py-2 text-[9px] font-semibold tracking-[0.08em] text-primary transition hover:bg-primary/20 hover:shadow-[0_0_16px_rgba(0,149,255,0.25)]"
+                            className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2.5 py-2 text-[9px] font-semibold tracking-[0.08em] transition ${
+                              group.text_clicked
+                                ? "bg-primary/25 border-primary/60 text-primary shadow-[0_0_16px_rgba(0,149,255,0.25)]"
+                                : "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 hover:shadow-[0_0_16px_rgba(0,149,255,0.25)]"
+                            }`}
                           >
                             <MessageSquare className="h-3 w-3" />
-                            {copiedTextId === group.id ? "✓ TEXTO" : "📋 TEXTO"}
+                            {group.text_clicked ? "✓ TEXTO" : "📋 TEXTO"}
                           </button>
                           <button
                             type="button"
