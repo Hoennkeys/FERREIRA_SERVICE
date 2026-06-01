@@ -1,7 +1,17 @@
-import { createRootRouteWithContext, Outlet, Link, useRouter } from '@tanstack/react-router'
-import { QueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import {
+  createRootRouteWithContext,
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+  useRouter,
+} from '@tanstack/react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useEffect, type ReactNode } from 'react'
 import { reportLovableError } from '../lib/lovable-error-reporting'
+
+// Voltamos ao import tradicional que funcionou perfeitamente localmente
+import '../styles.css'
 
 function NotFoundComponent() {
   return (
@@ -63,8 +73,43 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   )
 }
 
+function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <html lang="pt-BR">
+      <head>
+        <HeadContent />
+        {/* Injeção direta para garantir que a Vercel busque o arquivo gerado pelo build */}
+        <link rel="stylesheet" href="/styles.css" />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  )
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext()
+
+  return (
+    <RootDocument>
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+      </QueryClientProvider>
+    </RootDocument>
+  )
+}
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  component: () => <Outlet />,
+  head: () => ({
+    meta: [
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1.0' },
+      { title: 'Ferreira na Voz // Services' },
+    ],
+  }),
+  component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 })

@@ -16,11 +16,21 @@ export function Reveal({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      el.setAttribute("data-visible", "true");
+      return;
+    }
+
+    const show = () => {
+      setTimeout(() => el.setAttribute("data-visible", "true"), delay);
+    };
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (e.isIntersecting) {
-            setTimeout(() => el.setAttribute("data-visible", "true"), delay);
+            show();
             io.unobserve(el);
           }
         });
@@ -28,6 +38,14 @@ export function Reveal({
       { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
     );
     io.observe(el);
+
+    // Content above the fold should not stay invisible if IO is delayed.
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      show();
+      io.unobserve(el);
+    }
+
     return () => io.disconnect();
   }, [delay]);
 
