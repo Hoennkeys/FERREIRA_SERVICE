@@ -36,3 +36,4 @@ dist/
 *.sln
 *.sw?
 .vercel
+src/routeTree.gen.ts
