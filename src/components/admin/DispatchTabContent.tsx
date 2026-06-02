@@ -5,7 +5,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { X, Trash2, Image, CopyCheck, Upload, ListOrdered, AlertTriangle, MessageSquare, Lock, Timer } from "lucide-react";
+import { Trash2, Image, CopyCheck, Upload, ListOrdered, AlertTriangle, MessageSquare, Lock, Timer } from "lucide-react";
 import {
   clearFlyerPng,
   loadFlyerPng,
@@ -266,13 +266,7 @@ async function copyTextOnly(text: string): Promise<boolean> {
   }
 }
 
-export function DispatchPanel({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function DispatchTabContent() {
   const [message, setMessage] = useState(() => loadMessage());
   const [flyerUrl, setFlyerUrl] = useState(() => loadFlyerUrl());
   const [debouncedFlyerUrl, setDebouncedFlyerUrl] = useState(() => loadFlyerUrl());
@@ -314,25 +308,8 @@ export function DispatchPanel({
   };
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  useEffect(() => {
     return () => revokePreviewUrl();
   }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   useEffect(() => {
     storageReadyRef.current = true;
@@ -376,7 +353,7 @@ export function DispatchPanel({
   }, [flyerUrl]);
 
   useEffect(() => {
-    if (!open || uploadInProgressRef.current) return;
+    if (uploadInProgressRef.current) return;
 
     const runId = ++hydrateRunRef.current;
 
@@ -436,9 +413,7 @@ export function DispatchPanel({
     };
 
     hydrate();
-  }, [open, debouncedFlyerUrl]);
-
-  if (!open) return null;
+  }, [debouncedFlyerUrl]);
 
   const showFlyerToast = (ok: boolean) => {
     setToast({
@@ -586,21 +561,11 @@ export function DispatchPanel({
   const toastIsText = toast?.variant === "text";
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ animation: "fade-up 0.3s ease-out" }}
-    >
-      <button
-        type="button"
-        aria-label="Fechar painel"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-      />
-
+    <section className="relative">
       {toast && (
         <div
           key={toast.id}
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-2.5 glass rounded-full px-4 py-2.5 border ${
+          className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 glass rounded-full px-4 py-2.5 border ${
             toastIsError
               ? "border-amber-400/30 shadow-[0_0_30px_rgba(251,191,36,0.25)]"
               : "border-green-400/30 shadow-[0_0_30px_rgba(34,197,94,0.35)]"
@@ -627,17 +592,8 @@ export function DispatchPanel({
         </div>
       )}
 
-      <div className="relative w-full sm:max-w-5xl max-h-[95vh] overflow-y-auto glass rounded-t-2xl sm:rounded-2xl p-5 sm:p-7 shadow-[0_0_60px_rgba(0,149,255,0.15)] border-primary/20">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Fechar"
-          className="absolute top-4 right-4 text-white/50 hover:text-white transition z-10"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pr-8">
+      <div className="relative rounded-2xl border border-zinc-800 bg-[#0c0c0e] p-5 sm:p-7 shadow-[0_0_60px_rgba(0,149,255,0.08)]">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="text-[10px] tracking-[0.22em] text-primary">
               PAINEL PRIVADO // DESPACHO
@@ -665,7 +621,7 @@ export function DispatchPanel({
 
         {cooldownActive && (
           <div
-            className="absolute inset-0 z-[8] flex items-center justify-center rounded-t-2xl sm:rounded-2xl bg-black/85 backdrop-blur-md px-6"
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-black/85 backdrop-blur-md px-6"
             style={{ animation: "fade-up 0.3s ease-out" }}
           >
             <div className="glass rounded-2xl border-amber-400/30 px-6 py-8 sm:px-10 sm:py-10 text-center shadow-[0_0_60px_rgba(251,191,36,0.18)] max-w-sm">
@@ -946,7 +902,7 @@ export function DispatchPanel({
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

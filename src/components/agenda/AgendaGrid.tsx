@@ -5,41 +5,60 @@ import {
   DIAS,
   DIAS_LABELS,
   HORAS,
+  applyEffectiveStatus,
   fetchAgenda,
+  fetchReservasForWeek,
+  formatWeekRange,
+  getWeekStart,
   subscribeAgenda,
+  subscribeReservas,
   type AgendaSlot,
   type SlotStatus,
 } from "@/lib/agenda";
 
-// ── Slot color map ────────────────────────────────────────────────────────────
+// ── Client-slot visual state ──────────────────────────────────────────────────
 
-function slotClass(
-  status: SlotStatus,
-  isSelected: boolean,
-  mode: "client" | "admin",
-): string {
+type ClientState =
+  | "selectedStart"    // first slot of the confirmed block
+  | "selectedBlock"    // continuation of the confirmed block
+  | "hoverStart"       // first slot of the hover preview
+  | "hoverBlock"       // continuation of the hover preview
+  | "validStart"       // disponivel + full block fits → clickable
+  | "invalidStart"     // disponivel but block doesn't fit → disabled
+  | "bloqueado"
+  | "agendado";
+
+function clientSlotClass(state: ClientState): string {
+  const base =
+    "flex items-center justify-center rounded border text-[10px] font-semibold tracking-wider transition-all duration-100 select-none h-9";
+
+  switch (state) {
+    case "selectedStart":
+      return `${base} bg-cyan-400 border-cyan-300 text-black shadow-[0_0_14px_rgba(34,211,238,0.65)] z-10`;
+    case "selectedBlock":
+      return `${base} bg-cyan-400/65 border-cyan-300/80 text-black/80 shadow-[0_0_6px_rgba(34,211,238,0.25)]`;
+    case "hoverStart":
+      return `${base} bg-cyan-500/45 border-cyan-400/80 text-cyan-100 scale-105 cursor-pointer`;
+    case "hoverBlock":
+      return `${base} bg-cyan-500/20 border-cyan-500/50 text-cyan-300/70 cursor-pointer`;
+    case "validStart":
+      return `${base} bg-cyan-500/15 border-cyan-500/35 text-cyan-400 hover:bg-cyan-500/30 hover:border-cyan-400/60 cursor-pointer`;
+    case "agendado":
+      return `${base} bg-red-500/20 border-red-500/30 text-red-400 cursor-not-allowed`;
+    default: // invalidStart | bloqueado
+      return `${base} bg-white/5 border-white/10 text-white/15 cursor-not-allowed`;
+  }
+}
+
+// ── Admin-slot class (unchanged) ──────────────────────────────────────────────
+
+function adminSlotClass(status: SlotStatus): string {
   const base =
     "flex items-center justify-center rounded border text-[10px] font-semibold tracking-wider transition-all duration-150 select-none h-9";
-
-  if (isSelected) {
-    return `${base} bg-cyan-400 border-cyan-300 text-black shadow-[0_0_16px_rgba(34,211,238,0.7)] scale-105 cursor-pointer`;
-  }
-
-  if (status === "disponivel") {
-    const hover =
-      mode === "client"
-        ? "hover:bg-cyan-500/40 hover:border-cyan-400/70 hover:scale-105 cursor-pointer"
-        : "hover:bg-cyan-500/40 hover:border-cyan-400/70 cursor-pointer";
-    return `${base} bg-cyan-500/15 border-cyan-500/35 text-cyan-400 ${hover}`;
-  }
-
-  if (status === "bloqueado") {
-    const hover =
-      mode === "admin" ? "hover:bg-white/10 cursor-pointer" : "cursor-not-allowed";
-    return `${base} bg-white/5 border-white/10 text-white/20 ${hover}`;
-  }
-
-  // agendado
+  if (status === "disponivel")
+    return `${base} bg-cyan-500/15 border-cyan-500/35 text-cyan-400 hover:bg-cyan-500/40 hover:border-cyan-400/70 cursor-pointer`;
+  if (status === "bloqueado")
+    return `${base} bg-white/5 border-white/10 text-white/20 hover:bg-white/10 cursor-pointer`;
   return `${base} bg-red-500/20 border-red-500/30 text-red-400 cursor-not-allowed`;
 }
 
@@ -80,18 +99,23 @@ function GridSkeleton() {
 
 // ── Legend ───────────────────────────────────────────────────────────────────
 
-function Legend({ mode }: { mode: "client" | "admin" }) {
+function Legend({ mode, duracao }: { mode: "client" | "admin"; duracao: number }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3">
       <LegendItem color="bg-cyan-500/15 border-cyan-500/35" label="Disponível" />
       {mode === "client" && (
-        <LegendItem color="bg-cyan-400 border-cyan-300" label="Selecionado" />
+        <>
+          <LegendItem color="bg-cyan-400 border-cyan-300" label={`Bloco selecionado (${duracao}h)`} />
+          <LegendItem color="bg-white/5 border-white/10" label="Indisponível / sem espaço" />
+        </>
       )}
-      <LegendItem color="bg-white/5 border-white/10" label="Bloqueado" />
-      <LegendItem color="bg-red-500/20 border-red-500/30" label="Agendado" />
       {mode === "admin" && (
-        <LegendItem color="bg-primary/10 border-primary/30" label="Clique no dia/hora → massa" />
+        <>
+          <LegendItem color="bg-white/5 border-white/10" label="Bloqueado" />
+          <LegendItem color="bg-primary/10 border-primary/30" label="Clique no dia/hora → massa" />
+        </>
       )}
+      <LegendItem color="bg-red-500/20 border-red-500/30" label="Agendado" />
     </div>
   );
 }
@@ -105,32 +129,32 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
-// ── Helper: derive the target status for a bulk operation ────────────────────
-// If ANY changeable slot is 'disponivel' → target is 'bloqueado' (block all)
-// If ALL changeable slots are 'bloqueado' → target is 'disponivel' (free all)
+// ── Bulk helper ──────────────────────────────────────────────────────────────
 
 function bulkTarget(slotsToChange: AgendaSlot[]): SlotStatus {
   const changeable = slotsToChange.filter((s) => s.status !== "agendado");
-  const hasDisponivel = changeable.some((s) => s.status === "disponivel");
-  return hasDisponivel ? "bloqueado" : "disponivel";
+  return changeable.some((s) => s.status === "disponivel") ? "bloqueado" : "disponivel";
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface AgendaGridProps {
   mode: "client" | "admin";
-  selectedId?: string | null;
-  onSelect?: (slot: AgendaSlot) => void;
+  /** Duration in hours for block selection (client mode). Defaults to 1. */
+  duracao?: number;
+  /** IDs of the currently selected block in order [start, …, end] (client mode). */
+  selectedBlockIds?: string[];
+  /** Called with the full consecutive block when the user clicks a valid start. */
+  onSelect?: (block: AgendaSlot[]) => void;
   onAdminToggle?: (slot: AgendaSlot) => void;
-  /** Admin-only: called with slots of the whole day column (excl. agendado) */
   onBulkDay?: (dia: string, slotsForDay: AgendaSlot[]) => void;
-  /** Admin-only: called with slots of the whole hour row (excl. agendado) */
   onBulkHora?: (hora: number, slotsForHora: AgendaSlot[]) => void;
 }
 
 export function AgendaGrid({
   mode,
-  selectedId,
+  duracao = 1,
+  selectedBlockIds,
   onSelect,
   onAdminToggle,
   onBulkDay,
@@ -138,103 +162,128 @@ export function AgendaGrid({
 }: AgendaGridProps) {
   const [slots, setSlots] = useState<AgendaSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hoveredDia, setHoveredDia] = useState<string | null>(null);
+  const [hoveredHora, setHoveredHora] = useState<number | null>(null);
+  const semanaInicio = getWeekStart();
+
+  const reloadGrid = async (mounted: { current: boolean }) => {
+    const [template, reservas] = await Promise.all([
+      fetchAgenda(),
+      fetchReservasForWeek(semanaInicio),
+    ]);
+    if (mounted.current) {
+      setSlots(applyEffectiveStatus(template, reservas));
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    fetchAgenda().then((data) => {
-      if (mounted) {
-        setSlots(data);
-        setLoading(false);
-      }
-    });
+    const mounted = { current: true };
+    void reloadGrid(mounted);
 
-    const channel = subscribeAgenda((updated) => {
-      if (!mounted) return;
-      setSlots((prev) =>
-        prev.map((s) => (s.id === updated.id ? { ...s, status: updated.status } : s)),
-      );
+    const agendaChannel = subscribeAgenda(() => {
+      void reloadGrid(mounted);
+    });
+    const reservasChannel = subscribeReservas(semanaInicio, () => {
+      void reloadGrid(mounted);
     });
 
     return () => {
-      mounted = false;
-      channel.unsubscribe();
+      mounted.current = false;
+      agendaChannel.unsubscribe();
+      reservasChannel.unsubscribe();
     };
-  }, []);
+  }, [semanaInicio]);
 
-  // Build lookup: "dia:hora" → slot
+  // ── Lookup map: "dia:hora" → slot ────────────────────────────────────────
   const slotMap = new Map<string, AgendaSlot>();
   for (const s of slots) {
     slotMap.set(`${s.dia_da_semana}:${s.hora_inicio}`, s);
   }
 
-  // ── Individual slot click ──────────────────────────────────────────────────
+  // ── Client-mode helpers ──────────────────────────────────────────────────
 
-  function handleSlotClick(slot: AgendaSlot | undefined) {
-    if (!slot) return;
-    if (mode === "client") {
-      if (slot.status !== "disponivel") return;
-      onSelect?.(slot);
-    } else {
-      if (slot.status === "agendado") return;
-      onAdminToggle?.(slot);
+  /**
+   * Returns true if the slot at (dia, hora) can be the START of a valid block:
+   * - All duracao consecutive hours on the same day are 'disponivel'
+   * - Block does not exceed the 21h boundary
+   */
+  function isValidStart(dia: string, hora: number): boolean {
+    if (hora + duracao - 1 > 21) return false;
+    for (let h = hora; h < hora + duracao; h++) {
+      const s = slotMap.get(`${dia}:${h}`);
+      if (!s || s.status !== "disponivel") return false;
     }
+    return true;
   }
 
-  // ── Bulk: click on day header ──────────────────────────────────────────────
+  /** Returns the ordered block of slots starting at (dia, hora). */
+  function getBlock(dia: string, hora: number): AgendaSlot[] {
+    const block: AgendaSlot[] = [];
+    for (let h = hora; h < hora + duracao; h++) {
+      const s = slotMap.get(`${dia}:${h}`);
+      if (s) block.push(s);
+    }
+    return block;
+  }
+
+  function handleClientSlotClick(slot: AgendaSlot) {
+    if (!isValidStart(slot.dia_da_semana, slot.hora_inicio)) return;
+    onSelect?.(getBlock(slot.dia_da_semana, slot.hora_inicio));
+  }
+
+  // ── Admin-mode bulk helpers ──────────────────────────────────────────────
 
   function handleBulkDay(dia: string) {
     const slotsForDay = slots.filter((s) => s.dia_da_semana === dia);
-    const changeable = slotsForDay.filter((s) => s.status !== "agendado");
-    if (changeable.length === 0) return;
-
+    if (!slotsForDay.some((s) => s.status !== "agendado")) return;
     const target = bulkTarget(slotsForDay);
-
-    // Optimistic local update
     setSlots((prev) =>
       prev.map((s) =>
-        s.dia_da_semana === dia && s.status !== "agendado"
-          ? { ...s, status: target }
-          : s,
+        s.dia_da_semana === dia && s.status !== "agendado" ? { ...s, status: target } : s,
       ),
     );
-
     onBulkDay?.(dia, slotsForDay);
   }
 
-  // ── Bulk: click on hour label ──────────────────────────────────────────────
-
   function handleBulkHora(hora: number) {
     const slotsForHora = slots.filter((s) => s.hora_inicio === hora);
-    const changeable = slotsForHora.filter((s) => s.status !== "agendado");
-    if (changeable.length === 0) return;
-
+    if (!slotsForHora.some((s) => s.status !== "agendado")) return;
     const target = bulkTarget(slotsForHora);
-
-    // Optimistic local update
     setSlots((prev) =>
       prev.map((s) =>
-        s.hora_inicio === hora && s.status !== "agendado"
-          ? { ...s, status: target }
-          : s,
+        s.hora_inicio === hora && s.status !== "agendado" ? { ...s, status: target } : s,
       ),
     );
-
     onBulkHora?.(hora, slotsForHora);
   }
+
+  // ── Derived sets for O(1) lookup ─────────────────────────────────────────
+  const selIdSet = new Set(selectedBlockIds ?? []);
+  const selStart = selectedBlockIds?.[0] ?? null;
 
   if (loading) return <GridSkeleton />;
 
   const isAdmin = mode === "admin";
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div
+      className="w-full overflow-x-auto"
+      onMouseLeave={() => {
+        if (!isAdmin) {
+          setHoveredDia(null);
+          setHoveredHora(null);
+        }
+      }}
+    >
       <div className="min-w-[540px]">
+        <p className="mb-3 text-[10px] tracking-[0.14em] text-white/40 font-mono">
+          Semana operacional: {formatWeekRange(semanaInicio)}
+        </p>
 
-        {/* ── Header row (day names) ───────────────────────────────────── */}
+        {/* ── Day header row ───────────────────────────────────────────── */}
         <div className="grid grid-cols-8 gap-1 mb-1">
-          {/* Empty corner cell */}
           <div />
-
           {DIAS.map((dia) => {
             if (!isAdmin) {
               return (
@@ -246,35 +295,26 @@ export function AgendaGrid({
                 </div>
               );
             }
-
-            // Admin mode: clickable column header
             const slotsForDay = slots.filter((s) => s.dia_da_semana === dia);
-            const hasChangeableDay = slotsForDay.some((s) => s.status !== "agendado");
+            const hasChangeable = slotsForDay.some((s) => s.status !== "agendado");
             const dayTarget = bulkTarget(slotsForDay);
-            const dayTitle =
-              dayTarget === "bloqueado"
-                ? `Bloquear toda ${DIAS_LABELS[dia]}`
-                : `Liberar toda ${DIAS_LABELS[dia]}`;
-
             return (
               <button
                 key={dia}
                 type="button"
-                disabled={!hasChangeableDay}
-                title={hasChangeableDay ? dayTitle : undefined}
+                disabled={!hasChangeable}
+                title={hasChangeable ? (dayTarget === "bloqueado" ? `Bloquear toda ${DIAS_LABELS[dia]}` : `Liberar toda ${DIAS_LABELS[dia]}`) : undefined}
                 onClick={() => handleBulkDay(dia)}
                 className={[
                   "flex flex-col items-center gap-0.5 pb-1 rounded transition-all duration-150",
                   "text-[9px] tracking-widest font-semibold",
-                  hasChangeableDay
+                  hasChangeable
                     ? "text-white/50 hover:text-primary hover:bg-primary/10 cursor-pointer px-1"
                     : "text-white/20 cursor-default",
                 ].join(" ")}
               >
                 {DIAS_LABELS[dia]}
-                {hasChangeableDay && (
-                  <span className="text-[7px] text-white/20 leading-none">▼▲</span>
-                )}
+                {hasChangeable && <span className="text-[7px] text-white/20 leading-none">▼▲</span>}
               </button>
             );
           })}
@@ -284,30 +324,24 @@ export function AgendaGrid({
         {HORAS.map((h) => (
           <div key={h} className="grid grid-cols-8 gap-1 mb-1">
 
-            {/* Time label cell */}
+            {/* Time label */}
             {!isAdmin ? (
               <div className="flex items-center justify-end pr-2 text-[9px] text-white/30 font-mono">
                 {String(h).padStart(2, "0")}h
               </div>
             ) : (() => {
               const slotsForHora = slots.filter((s) => s.hora_inicio === h);
-              const hasChangeableHora = slotsForHora.some((s) => s.status !== "agendado");
+              const hasChangeable = slotsForHora.some((s) => s.status !== "agendado");
               const horaTarget = bulkTarget(slotsForHora);
-              const horaTitle =
-                horaTarget === "bloqueado"
-                  ? `Bloquear todas as ${String(h).padStart(2, "0")}:00`
-                  : `Liberar todas as ${String(h).padStart(2, "0")}:00`;
-
               return (
                 <button
                   type="button"
-                  disabled={!hasChangeableHora}
-                  title={hasChangeableHora ? horaTitle : undefined}
+                  disabled={!hasChangeable}
+                  title={hasChangeable ? (horaTarget === "bloqueado" ? `Bloquear todas as ${String(h).padStart(2,"0")}:00` : `Liberar todas as ${String(h).padStart(2,"0")}:00`) : undefined}
                   onClick={() => handleBulkHora(h)}
                   className={[
-                    "flex items-center justify-end pr-2 rounded transition-all duration-150",
-                    "text-[9px] font-mono",
-                    hasChangeableHora
+                    "flex items-center justify-end pr-2 rounded transition-all duration-150 text-[9px] font-mono",
+                    hasChangeable
                       ? "text-white/40 hover:text-primary hover:bg-primary/10 cursor-pointer"
                       : "text-white/15 cursor-default",
                   ].join(" ")}
@@ -321,30 +355,77 @@ export function AgendaGrid({
             {DIAS.map((d) => {
               const slot = slotMap.get(`${d}:${h}`);
               const status: SlotStatus = slot?.status ?? "bloqueado";
-              const isSelected = !!slot && slot.id === selectedId;
+
+              if (isAdmin) {
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => slot && onAdminToggle?.(slot)}
+                    disabled={!slot || status === "agendado"}
+                    title={
+                      status === "agendado" ? "Horário já agendado"
+                      : status === "bloqueado" ? "Clique para liberar"
+                      : "Clique para bloquear"
+                    }
+                    className={adminSlotClass(status)}
+                  />
+                );
+              }
+
+              // ── CLIENT MODE ─────────────────────────────────────────────
+              const inSelected = !!slot && selIdSet.has(slot.id);
+              const isSelStart = !!slot && slot.id === selStart;
+
+              const inHover =
+                hoveredDia === d &&
+                hoveredHora !== null &&
+                h >= hoveredHora &&
+                h < hoveredHora + duracao;
+              const isHoverStart = inHover && h === hoveredHora;
+
+              const valid = !!slot && status === "disponivel" && isValidStart(d, h);
+
+              let clientState: ClientState;
+              if (inSelected) {
+                clientState = isSelStart ? "selectedStart" : "selectedBlock";
+              } else if (inHover) {
+                clientState = isHoverStart ? "hoverStart" : "hoverBlock";
+              } else if (status === "agendado") {
+                clientState = "agendado";
+              } else if (valid) {
+                clientState = "validStart";
+              } else {
+                clientState = status === "disponivel" ? "invalidStart" : "bloqueado";
+              }
+
+              const isClickable = valid;
 
               return (
                 <button
                   key={d}
                   type="button"
-                  onClick={() => handleSlotClick(slot)}
-                  disabled={
-                    !slot ||
-                    (mode === "client" && status !== "disponivel") ||
-                    (mode === "admin" && status === "agendado")
-                  }
+                  disabled={!isClickable}
+                  onClick={() => slot && handleClientSlotClick(slot)}
+                  onMouseEnter={() => {
+                    if (valid) {
+                      setHoveredDia(d);
+                      setHoveredHora(h);
+                    } else {
+                      setHoveredDia(null);
+                      setHoveredHora(null);
+                    }
+                  }}
                   title={
-                    status === "agendado"
-                      ? "Horário já agendado"
-                      : status === "bloqueado" && mode === "admin"
-                        ? "Clique para liberar"
-                        : status === "disponivel" && mode === "admin"
-                          ? "Clique para bloquear"
-                          : undefined
+                    clientState === "validStart"
+                      ? `Selecionar bloco de ${duracao}h a partir das ${String(h).padStart(2,"0")}:00`
+                      : clientState === "agendado"
+                        ? "Horário já agendado"
+                        : undefined
                   }
-                  className={slotClass(status, isSelected, mode)}
+                  className={clientSlotClass(clientState)}
                 >
-                  {isSelected ? "✓" : null}
+                  {isSelStart ? "✓" : null}
                 </button>
               );
             })}
@@ -352,7 +433,7 @@ export function AgendaGrid({
         ))}
       </div>
 
-      <Legend mode={mode} />
+      <Legend mode={mode} duracao={duracao} />
     </div>
   );
 }

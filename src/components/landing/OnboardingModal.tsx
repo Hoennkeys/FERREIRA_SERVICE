@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { X, MessageCircle, Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import type { Pkg } from "./Pricing";
 import { AgendaGrid } from "@/components/agenda/AgendaGrid";
-import { bookSlot, DIAS_LABELS, type AgendaSlot } from "@/lib/agenda";
+import { bookSlotBlock, DIAS_FULL_LABELS, type AgendaSlot } from "@/lib/agenda";
 
 const WHATSAPP = "5581982180780";
 
@@ -13,7 +13,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   const [world, setWorld] = useState("");
   const [level, setLevel] = useState("");
   const [step, setStep] = useState<Step>(0);
-  const [selectedSlot, setSelectedSlot] = useState<AgendaSlot | null>(null);
+  const [selectedBlock, setSelectedBlock] = useState<AgendaSlot[] | null>(null);
   const [booking, setBooking] = useState(false);
   const [bookError, setBookError] = useState(false);
 
@@ -38,9 +38,12 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
 
   if (!pkg) return null;
 
+  // Parse "7h" → 7, "10h" → 10, etc.
+  const duracao = Math.max(1, parseInt(pkg?.hours ?? "1", 10) || 1);
+
   function handleClose() {
     setStep(0);
-    setSelectedSlot(null);
+    setSelectedBlock(null);
     setBookError(false);
     setChar("");
     setWorld("");
@@ -51,38 +54,43 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   // Step 0 → advance to schedule picker
   function onSubmitForm(e: FormEvent) {
     e.preventDefault();
-    setSelectedSlot(null);
+    setSelectedBlock(null);
     setBookError(false);
     setStep(1);
   }
 
-  // Step 1 → book slot + open WhatsApp
+  // Step 1 → book entire block + open WhatsApp
   async function onConfirmSlot() {
-    if (!selectedSlot) return;
+    if (!selectedBlock || selectedBlock.length === 0) return;
 
     setBooking(true);
     setBookError(false);
 
-    const ok = await bookSlot(selectedSlot.id);
+    const ids = selectedBlock.map((s) => s.id);
+    const ok = await bookSlotBlock(ids);
 
     setBooking(false);
 
     if (!ok) {
-      // Slot was taken by someone else — clear selection and show error
-      setSelectedSlot(null);
+      // One or more slots were taken — clear selection and ask to retry
+      setSelectedBlock(null);
       setBookError(true);
       return;
     }
 
-    const diaLabel = DIAS_LABELS[selectedSlot.dia_da_semana] ?? selectedSlot.dia_da_semana;
-    const hora = `${String(selectedSlot.hora_inicio).padStart(2, "0")}:00`;
+    const dia = selectedBlock[0].dia_da_semana;
+    const horaInicio = selectedBlock[0].hora_inicio;
+    const horaFim = horaInicio + selectedBlock.length;
+    const diaFull = DIAS_FULL_LABELS[dia] ?? dia;
+    const fmtInicio = `${String(horaInicio).padStart(2, "0")}:00`;
+    const fmtFim = `${String(horaFim).padStart(2, "0")}:00`;
 
     // pkg is non-null here — component returns null when pkg is null (early return above)
     const p = pkg!;
     const msg =
       `Olá Ferreira! Quero contratar o ${p.name} (${p.hours}). ` +
       `Dados da Operação: • Char: ${char} • Mundo: ${world} • Level: ${level}. ` +
-      `Horário escolhido: ${diaLabel} às ${hora}.`;
+      `Horário: ${diaFull} das ${fmtInicio} às ${fmtFim} (Total: ${selectedBlock.length}h).`;
 
     const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank", "noopener,noreferrer");
@@ -181,34 +189,45 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
             style={{ animation: "fade-up 0.25s ease-out" }}
           >
             <p className="text-xs text-white/50 mb-4">
-              Selecione um horário disponível{" "}
-              <span className="text-cyan-400">(verde)</span> para a sua operação.
+              Clique num bloco{" "}
+              <span className="text-cyan-400">verde</span> para selecionar o início
+              da sua operação de{" "}
+              <span className="text-white font-medium">{duracao}h</span>.
+              O bloco completo será destacado automaticamente.
             </p>
 
             <AgendaGrid
               mode="client"
-              selectedId={selectedSlot?.id}
-              onSelect={(slot) => {
-                setSelectedSlot(slot);
+              duracao={duracao}
+              selectedBlockIds={selectedBlock?.map((s) => s.id)}
+              onSelect={(block) => {
+                setSelectedBlock(block);
                 setBookError(false);
               }}
             />
 
             {bookError && (
               <p className="mt-3 text-xs text-red-400">
-                Esse horário acabou de ser reservado. Selecione outro.
+                Um ou mais horários desse bloco acabaram de ser reservados. Selecione outro.
               </p>
             )}
 
-            {selectedSlot && (
-              <p className="mt-3 text-xs text-cyan-300">
-                Selecionado:{" "}
-                <span className="font-semibold">
-                  {DIAS_LABELS[selectedSlot.dia_da_semana]} às{" "}
-                  {String(selectedSlot.hora_inicio).padStart(2, "0")}:00
-                </span>
-              </p>
-            )}
+            {selectedBlock && selectedBlock.length > 0 && (() => {
+              const startH = selectedBlock[0].hora_inicio;
+              const endH = startH + selectedBlock.length;
+              const dia = selectedBlock[0].dia_da_semana;
+              return (
+                <p className="mt-3 text-xs text-cyan-300">
+                  Selecionado:{" "}
+                  <span className="font-semibold">
+                    {DIAS_FULL_LABELS[dia] ?? dia}{" "}
+                    das {String(startH).padStart(2, "0")}:00{" "}
+                    às {String(endH).padStart(2, "0")}:00{" "}
+                    ({selectedBlock.length}h)
+                  </span>
+                </p>
+              );
+            })()}
 
             <div className="mt-5 flex gap-3">
               <button
@@ -223,7 +242,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               <button
                 type="button"
                 onClick={onConfirmSlot}
-                disabled={!selectedSlot || booking}
+                disabled={!selectedBlock || selectedBlock.length === 0 || booking}
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[0_0_30px_rgba(0,149,255,0.5)] transition hover:bg-primary/90 hover:shadow-[0_0_50px_rgba(0,149,255,0.7)] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 {booking ? (

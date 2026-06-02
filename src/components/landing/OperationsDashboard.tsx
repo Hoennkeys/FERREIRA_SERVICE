@@ -11,7 +11,7 @@ import { Reveal } from "./Reveal";
 
 const TWITCH_URL = "https://twitch.tv/ferreiranavoz";
 
-export function OperationsDashboard() {
+export function OperationsDashboard({ embedded = false }: { embedded?: boolean }) {
   const session = useLiveSession();
   const { uptime, xpFormatted } = useTelemetryTimer(session);
 
@@ -59,8 +59,8 @@ export function OperationsDashboard() {
     : "bg-white/25";
 
   return (
-    <section className="py-12 sm:py-20">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+    <section className={embedded ? "py-0" : "py-12 sm:py-20"}>
+      <div className={embedded ? "" : "mx-auto max-w-6xl px-4 sm:px-6"}>
         <Reveal>
           <div className="text-center mb-8">
             <span className="text-[10px] sm:text-xs font-medium tracking-[0.22em] text-white/40">
