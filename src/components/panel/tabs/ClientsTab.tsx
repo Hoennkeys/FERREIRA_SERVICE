@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Check, Users, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, CheckCircle2, MessageCircle, Users, X } from "lucide-react";
 
+import { formatWeekRange } from "@/lib/agenda";
 import {
   clientsStore,
+  filterVisibleClients,
   useClients,
   type ClientStatus,
   type ContractClient,
@@ -18,6 +20,8 @@ function statusBadgeClass(status: ClientStatus): string {
   switch (status) {
     case "Ativo":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-400";
+    case "Finalizado":
+      return "border-cyan-500/30 bg-cyan-500/10 text-cyan-400";
     case "Arquivado":
       return "border-zinc-600 bg-zinc-800/50 text-white/40";
     default:
@@ -33,15 +37,22 @@ function formatAgendaTags(client: ContractClient): string[] {
 
 export function ClientsTab() {
   const { clients } = useClients();
-  const [loadingId, setLoadingId] = useState<number | null>(null);
-  const [errorId, setErrorId] = useState<number | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [errorId, setErrorId] = useState<string | null>(null);
+  const [successId, setSuccessId] = useState<string | null>(null);
 
-  const visible = clients.filter((c) => c.status !== "Arquivado");
-  const archived = clients.filter((c) => c.status === "Arquivado");
+  useEffect(() => {
+    void clientsStore.purgeExpiredClients();
+  }, []);
 
-  async function handleApprove(id: number) {
+  const retained = filterVisibleClients(clients);
+  const visible = retained.filter((c) => c.status !== "Arquivado");
+  const archived = retained.filter((c) => c.status === "Arquivado");
+
+  async function handleApprove(id: string) {
     setLoadingId(id);
     setErrorId(null);
+    setSuccessId(null);
     const result = await clientsStore.approveClient(id);
     setLoadingId(null);
     if (!result.ok) {
@@ -49,8 +60,21 @@ export function ClientsTab() {
     }
   }
 
-  function handleArchive(id: number) {
-    clientsStore.archiveClient(id);
+  async function handleFinalize(id: string) {
+    setLoadingId(id);
+    setErrorId(null);
+    setSuccessId(null);
+    const result = await clientsStore.finalizeClient(id);
+    setLoadingId(null);
+    if (!result.ok) {
+      setErrorId(id);
+    } else {
+      setSuccessId(id);
+    }
+  }
+
+  function handleArchive(id: string) {
+    void clientsStore.archiveClient(id);
   }
 
   return (
@@ -66,6 +90,9 @@ export function ClientsTab() {
           <h1 className="mt-0.5 text-xl font-semibold text-white sm:text-2xl">
             Clientes & Contratos Ativos
           </h1>
+          <p className="mt-1 text-[10px] text-white/35">
+            Finalizados e arquivados são apagados automaticamente após 5 dias.
+          </p>
         </div>
       </div>
 
@@ -83,7 +110,9 @@ export function ClientsTab() {
               client={client}
               loading={loadingId === client.id}
               error={errorId === client.id}
+              success={successId === client.id}
               onApprove={() => handleApprove(client.id)}
+              onFinalize={() => handleFinalize(client.id)}
               onArchive={() => handleArchive(client.id)}
             />
           ))
@@ -92,7 +121,7 @@ export function ClientsTab() {
         {archived.length > 0 && (
           <div className="pt-4">
             <p className="mb-3 text-[10px] tracking-[0.18em] text-white/30">
-              ARQUIVADOS
+              ARQUIVADOS · removidos automaticamente após 5 dias
             </p>
             <div className="space-y-3 opacity-60">
               {archived.map((client) => (
@@ -101,7 +130,9 @@ export function ClientsTab() {
                   client={client}
                   loading={false}
                   error={false}
+                  success={false}
                   onApprove={() => {}}
+                  onFinalize={() => {}}
                   onArchive={() => {}}
                   readOnly
                 />
@@ -118,14 +149,18 @@ function ClientCard({
   client,
   loading,
   error,
+  success,
   onApprove,
+  onFinalize,
   onArchive,
   readOnly = false,
 }: {
   client: ContractClient;
   loading: boolean;
   error: boolean;
+  success: boolean;
   onApprove: () => void;
+  onFinalize: () => void;
   onArchive: () => void;
   readOnly?: boolean;
 }) {
@@ -144,34 +179,73 @@ function ClientCard({
           >
             {client.status.toUpperCase()}
           </span>
+          <p className="mt-2 text-[11px] text-white/45">
+            {client.pacote.nome} · {client.pacote.horas} · {client.pacote.preco}
+          </p>
+          <p className="mt-0.5 font-mono text-[10px] text-white/30">
+            Semana: {formatWeekRange(client.semanaInicio)}
+          </p>
         </div>
-        {!readOnly && client.status === "Pendente" && (
+
+        {!readOnly && (
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={loading}
-              onClick={onApprove}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+            <a
+              href={whatsAppHref(client.contato.whatsapp)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-cyan-300 transition hover:bg-cyan-500/20"
             >
-              <Check className="h-3.5 w-3.5" />
-              {loading ? "APROVANDO…" : "APROVAR CONTRATO"}
-            </button>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={onArchive}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-transparent px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-red-400/80 transition hover:border-red-500/50 hover:bg-red-500/5 disabled:opacity-50"
-            >
-              <X className="h-3.5 w-3.5" />
-              RECUSAR/ARQUIVAR
-            </button>
+              <MessageCircle className="h-3.5 w-3.5" />
+              CONVERSAR
+            </a>
+
+            {client.status === "Pendente" && (
+              <>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={onApprove}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {loading ? "APROVANDO…" : "APROVAR CONTRATO"}
+                </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={onArchive}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-transparent px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-red-400/80 transition hover:border-red-500/50 hover:bg-red-500/5 disabled:opacity-50"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  RECUSAR/ARQUIVAR
+                </button>
+              </>
+            )}
+
+            {client.status === "Ativo" && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={onFinalize}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-primary transition hover:bg-primary/20 disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {loading ? "FINALIZANDO…" : "FINALIZAR SERVIÇO"}
+              </button>
+            )}
           </div>
         )}
       </div>
 
       {error && (
         <p className="mt-3 text-[11px] text-red-400">
-          Falha ao aprovar — slots indisponíveis ou já agendados.
+          Operação falhou — verifique slots ou tente novamente.
+        </p>
+      )}
+
+      {success && (
+        <p className="mt-3 text-[11px] text-cyan-400">
+          Serviço finalizado. Horários liberados na agenda.
         </p>
       )}
 
@@ -190,10 +264,12 @@ function ClientCard({
                 {client.contato.whatsapp}
               </a>
             </li>
-            <li>
-              Discord:{" "}
-              <span className="font-mono text-white/60">{client.contato.discord}</span>
-            </li>
+            {client.contato.discord && (
+              <li>
+                Discord:{" "}
+                <span className="font-mono text-white/60">{client.contato.discord}</span>
+              </li>
+            )}
           </ul>
         </div>
 
@@ -203,7 +279,7 @@ function ClientCard({
             <li>
               <span className="font-semibold text-white">{client.character.nome}</span>
             </li>
-            <li>Lv. {client.character.level} · {client.character.vocacao}</li>
+            <li>Lv. {client.character.level}</li>
             <li className="text-white/50">{client.character.servidor}</li>
           </ul>
         </div>

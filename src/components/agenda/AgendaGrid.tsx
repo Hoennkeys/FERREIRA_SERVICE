@@ -8,6 +8,7 @@ import {
   applyEffectiveStatus,
   fetchAgenda,
   fetchReservasForWeek,
+  formatDayColumnLabel,
   formatWeekRange,
   getWeekStart,
   subscribeAgenda,
@@ -289,9 +290,9 @@ export function AgendaGrid({
               return (
                 <div
                   key={dia}
-                  className="text-center text-[9px] tracking-widest text-white/50 font-semibold pb-1"
+                  className="text-center text-[9px] tracking-widest text-white/50 font-semibold pb-1 leading-tight"
                 >
-                  {DIAS_LABELS[dia]}
+                  {formatDayColumnLabel(dia, semanaInicio)}
                 </div>
               );
             }
@@ -307,13 +308,13 @@ export function AgendaGrid({
                 onClick={() => handleBulkDay(dia)}
                 className={[
                   "flex flex-col items-center gap-0.5 pb-1 rounded transition-all duration-150",
-                  "text-[9px] tracking-widest font-semibold",
+                  "text-[9px] tracking-widest font-semibold leading-tight",
                   hasChangeable
                     ? "text-white/50 hover:text-primary hover:bg-primary/10 cursor-pointer px-1"
                     : "text-white/20 cursor-default",
                 ].join(" ")}
               >
-                {DIAS_LABELS[dia]}
+                {formatDayColumnLabel(dia, semanaInicio)}
                 {hasChangeable && <span className="text-[7px] text-white/20 leading-none">▼▲</span>}
               </button>
             );

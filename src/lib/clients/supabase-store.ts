@@ -4,13 +4,16 @@ import {
   releasePedidoReservas,
   rollbackReservasForPedido,
 } from "../agenda";
+import { isMissingTableError } from "../supabase-errors";
 import { dispatchQueueStore } from "../dispatch-queue";
+import { retentionCutoffIso } from "./retention";
 import type { ClientsStore, ClientsListener } from "./store";
 import {
   rowToClient,
   type ApproveResult,
   type ClientsState,
   type CreateOrderInput,
+  type CreateOrderResult,
   type FinalizeResult,
   type PedidoRow,
 } from "./types";
@@ -38,20 +41,51 @@ class SupabaseClientsStore implements ClientsStore {
     this.emit();
   }
 
-  private async fetchAll() {
+  private async reload() {
     const { data, error } = await supabase
       .from(TABLE)
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      if (error.code !== "42P01") {
+      if (!isMissingTableError(error.code, error.message)) {
         console.warn("[clients] fetchAll error:", error.message);
       }
       return;
     }
 
     this.setClients((data as PedidoRow[]).map(rowToClient));
+  }
+
+  private async fetchAll() {
+    await this.purgeExpiredInternal();
+    await this.reload();
+  }
+
+  private async purgeExpiredInternal(): Promise<number> {
+    const cutoff = retentionCutoffIso();
+    const { data, error } = await supabase
+      .from(TABLE)
+      .delete()
+      .in("status", ["Finalizado", "Arquivado"])
+      .lt("updated_at", cutoff)
+      .select("id");
+
+    if (error) {
+      if (!isMissingTableError(error.code, error.message)) {
+        console.warn("[clients] purgeExpired error:", error.message);
+      }
+      return 0;
+    }
+
+    return data?.length ?? 0;
+  }
+
+  async purgeExpiredClients(): Promise<number> {
+    this.ensureRealtime();
+    const removed = await this.purgeExpiredInternal();
+    if (removed > 0) await this.reload();
+    return removed;
   }
 
   private ensureRealtime() {
@@ -84,9 +118,7 @@ class SupabaseClientsStore implements ClientsStore {
     return () => this.listeners.delete(listener);
   }
 
-  async createOrder(
-    input: CreateOrderInput,
-  ): Promise<{ ok: true; id: string } | { ok: false }> {
+  async createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
     const { data, error } = await supabase
       .from(TABLE)
       .insert({
@@ -111,8 +143,11 @@ class SupabaseClientsStore implements ClientsStore {
       .single();
 
     if (error || !data) {
-      console.warn("[clients] createOrder error:", error?.message);
-      return { ok: false };
+      console.warn("[clients] createOrder error:", error?.code, error?.message);
+      if (isMissingTableError(error?.code, error?.message)) {
+        return { ok: false, reason: "setup" };
+      }
+      return { ok: false, reason: "unknown" };
     }
 
     await this.fetchAll();
@@ -165,6 +200,7 @@ class SupabaseClientsStore implements ClientsStore {
   }
 
   async archiveClient(id: string): Promise<void> {
+    await releasePedidoReservas(id);
     await supabase
       .from(TABLE)
       .update({ status: "Arquivado", updated_at: new Date().toISOString() })

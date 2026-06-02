@@ -5,12 +5,14 @@ import {
   rollbackReservasForPedido,
 } from "../agenda";
 import { dispatchQueueStore } from "../dispatch-queue";
+import { getExpiredClosedClientIds } from "./retention";
 import type { ClientsStore, ClientsListener } from "./store";
 import type {
   ApproveResult,
   ClientsState,
   ContractClient,
   CreateOrderInput,
+  CreateOrderResult,
   FinalizeResult,
 } from "./types";
 
@@ -30,6 +32,28 @@ class MockClientsStore implements ClientsStore {
     } catch {
       /* ignore */
     }
+    void this.purgeExpiredInternal();
+  }
+
+  private purgeExpiredInternal(): number {
+    const expiredIds = getExpiredClosedClientIds(this.state.clients);
+    if (expiredIds.length === 0) return 0;
+    this.state = {
+      clients: this.state.clients.filter((c) => !expiredIds.includes(c.id)),
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+    } catch {
+      /* ignore */
+    }
+    return expiredIds.length;
+  }
+
+  async purgeExpiredClients(): Promise<number> {
+    this.ensureInit();
+    const removed = this.purgeExpiredInternal();
+    if (removed > 0) this.emit();
+    return removed;
   }
 
   private persist() {
@@ -59,9 +83,7 @@ class MockClientsStore implements ClientsStore {
     return () => this.listeners.delete(listener);
   }
 
-  async createOrder(
-    input: CreateOrderInput,
-  ): Promise<{ ok: true; id: string } | { ok: false }> {
+  async createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
     this.ensureInit();
     const id = crypto.randomUUID();
     const client: ContractClient = {
@@ -88,6 +110,7 @@ class MockClientsStore implements ClientsStore {
       status: "Pendente",
       origem: "homepage",
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     this.state = { clients: [client, ...this.state.clients] };
     this.persist();
@@ -127,7 +150,9 @@ class MockClientsStore implements ClientsStore {
 
     this.state = {
       clients: this.state.clients.map((c) =>
-        c.id === id ? { ...c, status: "Ativo" } : c,
+        c.id === id
+          ? { ...c, status: "Ativo", updatedAt: new Date().toISOString() }
+          : c,
       ),
     };
     this.persist();
@@ -136,9 +161,12 @@ class MockClientsStore implements ClientsStore {
 
   async archiveClient(id: string): Promise<void> {
     this.ensureInit();
+    await releasePedidoReservas(id);
     this.state = {
       clients: this.state.clients.map((c) =>
-        c.id === id ? { ...c, status: "Arquivado" } : c,
+        c.id === id
+          ? { ...c, status: "Arquivado", updatedAt: new Date().toISOString() }
+          : c,
       ),
     };
     this.persist();
@@ -154,7 +182,9 @@ class MockClientsStore implements ClientsStore {
 
     this.state = {
       clients: this.state.clients.map((c) =>
-        c.id === id ? { ...c, status: "Finalizado" } : c,
+        c.id === id
+          ? { ...c, status: "Finalizado", updatedAt: new Date().toISOString() }
+          : c,
       ),
     };
     this.persist();

@@ -49,9 +49,9 @@ create policy "pedidos_insert_public"
   on pedidos_cliente for insert
   with check (true);
 
-create policy "pedidos_select_admin"
+-- SELECT público: insert().select('id') na homepage (anon) precisa ler o row retornado
+create policy "pedidos_select_public"
   on pedidos_cliente for select
-  to authenticated
   using (true);
 
 create policy "pedidos_update_admin"
@@ -60,9 +60,9 @@ create policy "pedidos_update_admin"
   using (true)
   with check (true);
 
-create policy "pedidos_delete_admin"
+-- DELETE público: rollback do pedido se a reserva falhar (homepage anon)
+create policy "pedidos_delete_public"
   on pedidos_cliente for delete
-  to authenticated
   using (true);
 
 -- Reservas: qualquer um lê (grade pública); anon insere; admin atualiza

@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
 
 import { AgendaGrid } from "@/components/agenda/AgendaGrid";
-import { bulkToggle, toggleAdminSlot, type AgendaSlot } from "@/lib/agenda";
+import { bulkToggle, repairLegacyAgendadoSlots, toggleAdminSlot, type AgendaSlot } from "@/lib/agenda";
 
 export function AgendaTab() {
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    void repairLegacyAgendadoSlots();
+  }, []);
 
   async function handleToggle(slot: AgendaSlot) {
     if (slot.status === "agendado") return;

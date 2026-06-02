@@ -29,6 +29,7 @@ export interface ContractClient {
   status: ClientStatus;
   origem: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ClientsState {
@@ -51,6 +52,10 @@ export type CreateOrderInput = {
   slotIds: string[];
   semanaInicio: string;
 };
+
+export type CreateOrderResult =
+  | { ok: true; id: string }
+  | { ok: false; reason: "setup" | "unknown" };
 
 export type ApproveResult =
   | { ok: true }
@@ -80,6 +85,7 @@ export type PedidoRow = {
   status: ClientStatus;
   origem: string;
   created_at: string;
+  updated_at: string;
 };
 
 export function rowToClient(row: PedidoRow): ContractClient {
@@ -110,5 +116,6 @@ export function rowToClient(row: PedidoRow): ContractClient {
     status: row.status,
     origem: row.origem,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
