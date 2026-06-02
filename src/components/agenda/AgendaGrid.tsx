@@ -31,7 +31,7 @@ function clientSlotClass(state: ClientState): string {
     case "selectedStart":
       return `${base} bg-cyan-400 border-cyan-300 text-black shadow-[0_0_14px_rgba(34,211,238,0.65)] z-10`;
     case "selectedBlock":
-      return `${base} bg-cyan-400/20 border-cyan-400/45 text-cyan-200`;
+      return `${base} bg-cyan-400/65 border-cyan-300/80 text-black/80 shadow-[0_0_6px_rgba(34,211,238,0.25)]`;
     case "hoverStart":
       return `${base} bg-cyan-500/45 border-cyan-400/80 text-cyan-100 scale-105 cursor-pointer`;
     case "hoverBlock":
