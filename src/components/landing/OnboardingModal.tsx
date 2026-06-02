@@ -2,22 +2,36 @@ import { useEffect, useState, type FormEvent } from "react";
 import { X, MessageCircle, Calendar, ChevronLeft, Loader2 } from "lucide-react";
 import type { Pkg } from "./Pricing";
 import { AgendaGrid } from "@/components/agenda/AgendaGrid";
-import { bookSlotBlock, DIAS_FULL_LABELS, type AgendaSlot } from "@/lib/agenda";
+import {
+  agendaFromBlock,
+  bookSlotBlock,
+  DIAS_FULL_LABELS,
+  getWeekStart,
+  type AgendaSlot,
+} from "@/lib/agenda";
+import { clientsStore } from "@/lib/clients";
 
 const WHATSAPP = "5581982180780";
 
 type Step = 0 | 1;
 
+function isValidWhatsApp(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 10;
+}
+
 export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: () => void }) {
+  const [nome, setNome] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [discord, setDiscord] = useState("");
   const [char, setChar] = useState("");
   const [world, setWorld] = useState("");
   const [level, setLevel] = useState("");
   const [step, setStep] = useState<Step>(0);
   const [selectedBlock, setSelectedBlock] = useState<AgendaSlot[] | null>(null);
   const [booking, setBooking] = useState(false);
-  const [bookError, setBookError] = useState(false);
+  const [confirmError, setConfirmError] = useState<"order" | "slot" | "setup" | null>(null);
 
-  // Lock body scroll
   useEffect(() => {
     if (pkg) {
       document.body.style.overflow = "hidden";
@@ -29,7 +43,6 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     };
   }, [pkg]);
 
-  // Escape key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && handleClose();
     window.addEventListener("keydown", onKey);
@@ -38,45 +51,76 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
 
   if (!pkg) return null;
 
-  // Parse "7h" → 7, "10h" → 10, etc.
   const duracao = Math.max(1, parseInt(pkg?.hours ?? "1", 10) || 1);
 
   function handleClose() {
     setStep(0);
     setSelectedBlock(null);
-    setBookError(false);
+    setConfirmError(null);
+    setNome("");
+    setWhatsapp("");
+    setDiscord("");
     setChar("");
     setWorld("");
     setLevel("");
     onClose();
   }
 
-  // Step 0 → advance to schedule picker
   function onSubmitForm(e: FormEvent) {
     e.preventDefault();
+    if (!isValidWhatsApp(whatsapp)) return;
     setSelectedBlock(null);
-    setBookError(false);
+    setConfirmError(null);
     setStep(1);
   }
 
-  // Step 1 → book entire block + open WhatsApp
   async function onConfirmSlot() {
     if (!selectedBlock || selectedBlock.length === 0) return;
 
     setBooking(true);
-    setBookError(false);
+    setConfirmError(null);
 
-    const ids = selectedBlock.map((s) => s.id);
-    const ok = await bookSlotBlock(ids);
+    const p = pkg!;
+    const semanaInicio = getWeekStart();
+    const { dias, horarios } = agendaFromBlock(selectedBlock);
+    const slotIds = selectedBlock.map((s) => s.id);
+    const parsedLevel = Math.max(1, parseInt(level.replace(/\D/g, ""), 10) || 1);
+    const clientName = nome.trim() || char.trim();
 
-    setBooking(false);
+    const orderResult = await clientsStore.createOrder({
+      nome: clientName,
+      whatsapp: whatsapp.trim(),
+      discord: discord.trim() || undefined,
+      charNome: char.trim(),
+      charLevel: parsedLevel,
+      charServidor: world.trim(),
+      pacoteId: p.id,
+      pacoteNome: p.name,
+      pacoteHoras: p.hours,
+      pacotePreco: p.price,
+      agendaDias: dias,
+      agendaHorarios: horarios,
+      slotIds,
+      semanaInicio,
+    });
 
-    if (!ok) {
-      // One or more slots were taken — clear selection and ask to retry
-      setSelectedBlock(null);
-      setBookError(true);
+    if (!orderResult.ok) {
+      setBooking(false);
+      setConfirmError(orderResult.reason === "setup" ? "setup" : "order");
       return;
     }
+
+    const booked = await bookSlotBlock(slotIds, orderResult.id, semanaInicio);
+
+    if (!booked) {
+      await clientsStore.deleteOrder(orderResult.id);
+      setBooking(false);
+      setSelectedBlock(null);
+      setConfirmError("slot");
+      return;
+    }
+
+    setBooking(false);
 
     const dia = selectedBlock[0].dia_da_semana;
     const horaInicio = selectedBlock[0].hora_inicio;
@@ -85,11 +129,11 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     const fmtInicio = `${String(horaInicio).padStart(2, "0")}:00`;
     const fmtFim = `${String(horaFim).padStart(2, "0")}:00`;
 
-    // pkg is non-null here — component returns null when pkg is null (early return above)
-    const p = pkg!;
     const msg =
       `Olá Ferreira! Quero contratar o ${p.name} (${p.hours}). ` +
       `Dados da Operação: • Char: ${char} • Mundo: ${world} • Level: ${level}. ` +
+      `WhatsApp: ${whatsapp.trim()}. ` +
+      (discord.trim() ? `Discord: ${discord.trim()}. ` : "") +
       `Horário: ${diaFull} das ${fmtInicio} às ${fmtFim} (Total: ${selectedBlock.length}h).`;
 
     const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
@@ -97,18 +141,13 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     handleClose();
   }
 
-  // Width expands on step 1 to fit the grid
-  const panelClass =
-    step === 0
-      ? "w-full sm:max-w-md"
-      : "w-full sm:max-w-2xl";
+  const panelClass = step === 0 ? "w-full sm:max-w-md" : "w-full sm:max-w-2xl";
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
       style={{ animation: "fade-up 0.3s ease-out" }}
     >
-      {/* Backdrop */}
       <button
         type="button"
         aria-label="Fechar"
@@ -119,7 +158,6 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
       <div
         className={`relative ${panelClass} glass rounded-t-2xl sm:rounded-2xl p-6 sm:p-7 shadow-[0_0_60px_rgba(0,149,255,0.2)] border-primary/30 transition-all duration-300`}
       >
-        {/* Close button */}
         <button
           type="button"
           onClick={handleClose}
@@ -129,7 +167,6 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
           <X className="h-4 w-4" />
         </button>
 
-        {/* Header — always visible */}
         <div className="text-[10px] tracking-[0.22em] text-primary">
           {step === 0 ? "ONBOARDING" : "AGENDAMENTO"}
         </div>
@@ -138,20 +175,39 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
           {pkg.hours} • <span className="text-white">{pkg.price}</span>
         </p>
 
-        {/* Step indicator */}
         <div className="mt-4 flex items-center gap-2">
           <StepDot active={step === 0} done={step > 0} label="Dados" />
           <div className="flex-1 h-px bg-white/10" />
           <StepDot active={step === 1} done={false} label="Horário" />
         </div>
 
-        {/* ── STEP 0: form ──────────────────────────────────── */}
         {step === 0 && (
           <form
             onSubmit={onSubmitForm}
             className="mt-6 space-y-3"
             style={{ animation: "fade-up 0.25s ease-out" }}
           >
+            <Field
+              label="Seu Nome (opcional)"
+              value={nome}
+              onChange={setNome}
+              placeholder="Ex: Carlos Silva"
+              required={false}
+            />
+            <Field
+              label="WhatsApp"
+              value={whatsapp}
+              onChange={setWhatsapp}
+              placeholder="Ex: +55 11 99999-9999"
+              inputMode="tel"
+            />
+            <Field
+              label="Discord (opcional)"
+              value={discord}
+              onChange={setDiscord}
+              placeholder="Ex: usuario#1234"
+              required={false}
+            />
             <Field
               label="Nome do Personagem"
               value={char}
@@ -182,12 +238,8 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
           </form>
         )}
 
-        {/* ── STEP 1: schedule grid ─────────────────────────── */}
         {step === 1 && (
-          <div
-            className="mt-6"
-            style={{ animation: "fade-up 0.25s ease-out" }}
-          >
+          <div className="mt-6" style={{ animation: "fade-up 0.25s ease-out" }}>
             <p className="text-xs text-white/50 mb-4">
               Clique num bloco{" "}
               <span className="text-cyan-400">verde</span> para selecionar o início
@@ -202,13 +254,26 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               selectedBlockIds={selectedBlock?.map((s) => s.id)}
               onSelect={(block) => {
                 setSelectedBlock(block);
-                setBookError(false);
+                setConfirmError(null);
               }}
             />
 
-            {bookError && (
+            {confirmError === "setup" && (
+              <p className="mt-3 text-xs text-amber-400">
+                Banco parcialmente configurado. Pedidos funcionam em modo local neste
+                navegador. Para persistir no Supabase, rode{" "}
+                <code className="text-amber-200">npm run db:setup</code> ou execute{" "}
+                <code className="text-amber-200">supabase/setup.sql</code> no dashboard.
+              </p>
+            )}
+            {confirmError === "slot" && (
               <p className="mt-3 text-xs text-red-400">
                 Um ou mais horários desse bloco acabaram de ser reservados. Selecione outro.
+              </p>
+            )}
+            {confirmError === "order" && (
+              <p className="mt-3 text-xs text-red-400">
+                Não foi possível registrar o pedido. Verifique sua conexão e tente novamente.
               </p>
             )}
 
@@ -260,8 +325,6 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
 function StepDot({
   active,
   done,
@@ -301,18 +364,20 @@ function Field({
   onChange,
   placeholder,
   inputMode,
+  required = true,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  inputMode?: "numeric" | "text";
+  inputMode?: "numeric" | "text" | "tel";
+  required?: boolean;
 }) {
   return (
     <label className="block">
       <span className="text-[10px] tracking-[0.18em] text-white/50">{label}</span>
       <input
-        required
+        required={required}
         type="text"
         inputMode={inputMode}
         value={value}

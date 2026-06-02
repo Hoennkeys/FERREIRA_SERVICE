@@ -76,8 +76,6 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
     <html lang="pt-BR">
       <head>
         <HeadContent />
-        {/* Injeção direta para garantir que a Vercel busque o arquivo gerado pelo build */}
-        <link rel="stylesheet" href="/styles.css" />
       </head>
       <body>
         {children}
