@@ -96,6 +96,31 @@ export async function toggleAdminSlot(
 }
 
 /**
+ * Bulk toggle em lote: disponivel ↔ bloqueado para uma lista de slots.
+ * Regra: se QUALQUER slot da lista for 'disponivel', todos viram 'bloqueado'.
+ *        Se TODOS forem 'bloqueado', todos viram 'disponivel'.
+ * Slots 'agendado' são sempre ignorados.
+ * Uma única query .in() é enviada ao Supabase.
+ */
+export async function bulkToggle(slots: AgendaSlot[]): Promise<void> {
+  const changeable = slots.filter((s) => s.status !== "agendado");
+  if (changeable.length === 0) return;
+
+  const hasDisponivel = changeable.some((s) => s.status === "disponivel");
+  const targetStatus: SlotStatus = hasDisponivel ? "bloqueado" : "disponivel";
+  const ids = changeable.map((s) => s.id);
+
+  const { error } = await supabase
+    .from("disponibilidade_agenda")
+    .update({ status: targetStatus })
+    .in("id", ids);
+
+  if (error) {
+    console.warn("[agenda] bulkToggle error:", error.message);
+  }
+}
+
+/**
  * Subscreve mudanças na tabela via Supabase Realtime.
  * Chame `.unsubscribe()` no cleanup do useEffect.
  */

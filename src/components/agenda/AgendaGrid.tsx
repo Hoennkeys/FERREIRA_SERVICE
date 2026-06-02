@@ -89,6 +89,9 @@ function Legend({ mode }: { mode: "client" | "admin" }) {
       )}
       <LegendItem color="bg-white/5 border-white/10" label="Bloqueado" />
       <LegendItem color="bg-red-500/20 border-red-500/30" label="Agendado" />
+      {mode === "admin" && (
+        <LegendItem color="bg-primary/10 border-primary/30" label="Clique no dia/hora → massa" />
+      )}
     </div>
   );
 }
@@ -102,6 +105,16 @@ function LegendItem({ color, label }: { color: string; label: string }) {
   );
 }
 
+// ── Helper: derive the target status for a bulk operation ────────────────────
+// If ANY changeable slot is 'disponivel' → target is 'bloqueado' (block all)
+// If ALL changeable slots are 'bloqueado' → target is 'disponivel' (free all)
+
+function bulkTarget(slotsToChange: AgendaSlot[]): SlotStatus {
+  const changeable = slotsToChange.filter((s) => s.status !== "agendado");
+  const hasDisponivel = changeable.some((s) => s.status === "disponivel");
+  return hasDisponivel ? "bloqueado" : "disponivel";
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface AgendaGridProps {
@@ -109,6 +122,10 @@ interface AgendaGridProps {
   selectedId?: string | null;
   onSelect?: (slot: AgendaSlot) => void;
   onAdminToggle?: (slot: AgendaSlot) => void;
+  /** Admin-only: called with slots of the whole day column (excl. agendado) */
+  onBulkDay?: (dia: string, slotsForDay: AgendaSlot[]) => void;
+  /** Admin-only: called with slots of the whole hour row (excl. agendado) */
+  onBulkHora?: (hora: number, slotsForHora: AgendaSlot[]) => void;
 }
 
 export function AgendaGrid({
@@ -116,6 +133,8 @@ export function AgendaGrid({
   selectedId,
   onSelect,
   onAdminToggle,
+  onBulkDay,
+  onBulkHora,
 }: AgendaGridProps) {
   const [slots, setSlots] = useState<AgendaSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,15 +161,16 @@ export function AgendaGrid({
     };
   }, []);
 
-  // Build lookup: dia -> hora -> slot
+  // Build lookup: "dia:hora" → slot
   const slotMap = new Map<string, AgendaSlot>();
   for (const s of slots) {
     slotMap.set(`${s.dia_da_semana}:${s.hora_inicio}`, s);
   }
 
-  function handleClick(slot: AgendaSlot | undefined) {
-    if (!slot) return;
+  // ── Individual slot click ──────────────────────────────────────────────────
 
+  function handleSlotClick(slot: AgendaSlot | undefined) {
+    if (!slot) return;
     if (mode === "client") {
       if (slot.status !== "disponivel") return;
       onSelect?.(slot);
@@ -160,32 +180,144 @@ export function AgendaGrid({
     }
   }
 
+  // ── Bulk: click on day header ──────────────────────────────────────────────
+
+  function handleBulkDay(dia: string) {
+    const slotsForDay = slots.filter((s) => s.dia_da_semana === dia);
+    const changeable = slotsForDay.filter((s) => s.status !== "agendado");
+    if (changeable.length === 0) return;
+
+    const target = bulkTarget(slotsForDay);
+
+    // Optimistic local update
+    setSlots((prev) =>
+      prev.map((s) =>
+        s.dia_da_semana === dia && s.status !== "agendado"
+          ? { ...s, status: target }
+          : s,
+      ),
+    );
+
+    onBulkDay?.(dia, slotsForDay);
+  }
+
+  // ── Bulk: click on hour label ──────────────────────────────────────────────
+
+  function handleBulkHora(hora: number) {
+    const slotsForHora = slots.filter((s) => s.hora_inicio === hora);
+    const changeable = slotsForHora.filter((s) => s.status !== "agendado");
+    if (changeable.length === 0) return;
+
+    const target = bulkTarget(slotsForHora);
+
+    // Optimistic local update
+    setSlots((prev) =>
+      prev.map((s) =>
+        s.hora_inicio === hora && s.status !== "agendado"
+          ? { ...s, status: target }
+          : s,
+      ),
+    );
+
+    onBulkHora?.(hora, slotsForHora);
+  }
+
   if (loading) return <GridSkeleton />;
+
+  const isAdmin = mode === "admin";
 
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[540px]">
-        {/* Header row */}
+
+        {/* ── Header row (day names) ───────────────────────────────────── */}
         <div className="grid grid-cols-8 gap-1 mb-1">
+          {/* Empty corner cell */}
           <div />
-          {DIAS.map((d) => (
-            <div
-              key={d}
-              className="text-center text-[9px] tracking-widest text-white/50 font-semibold pb-1"
-            >
-              {DIAS_LABELS[d]}
-            </div>
-          ))}
+
+          {DIAS.map((dia) => {
+            if (!isAdmin) {
+              return (
+                <div
+                  key={dia}
+                  className="text-center text-[9px] tracking-widest text-white/50 font-semibold pb-1"
+                >
+                  {DIAS_LABELS[dia]}
+                </div>
+              );
+            }
+
+            // Admin mode: clickable column header
+            const slotsForDay = slots.filter((s) => s.dia_da_semana === dia);
+            const hasChangeableDay = slotsForDay.some((s) => s.status !== "agendado");
+            const dayTarget = bulkTarget(slotsForDay);
+            const dayTitle =
+              dayTarget === "bloqueado"
+                ? `Bloquear toda ${DIAS_LABELS[dia]}`
+                : `Liberar toda ${DIAS_LABELS[dia]}`;
+
+            return (
+              <button
+                key={dia}
+                type="button"
+                disabled={!hasChangeableDay}
+                title={hasChangeableDay ? dayTitle : undefined}
+                onClick={() => handleBulkDay(dia)}
+                className={[
+                  "flex flex-col items-center gap-0.5 pb-1 rounded transition-all duration-150",
+                  "text-[9px] tracking-widest font-semibold",
+                  hasChangeableDay
+                    ? "text-white/50 hover:text-primary hover:bg-primary/10 cursor-pointer px-1"
+                    : "text-white/20 cursor-default",
+                ].join(" ")}
+              >
+                {DIAS_LABELS[dia]}
+                {hasChangeableDay && (
+                  <span className="text-[7px] text-white/20 leading-none">▼▲</span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Hour rows */}
+        {/* ── Hour rows ────────────────────────────────────────────────── */}
         {HORAS.map((h) => (
           <div key={h} className="grid grid-cols-8 gap-1 mb-1">
-            {/* Time label */}
-            <div className="flex items-center justify-end pr-2 text-[9px] text-white/30 font-mono">
-              {String(h).padStart(2, "0")}h
-            </div>
 
+            {/* Time label cell */}
+            {!isAdmin ? (
+              <div className="flex items-center justify-end pr-2 text-[9px] text-white/30 font-mono">
+                {String(h).padStart(2, "0")}h
+              </div>
+            ) : (() => {
+              const slotsForHora = slots.filter((s) => s.hora_inicio === h);
+              const hasChangeableHora = slotsForHora.some((s) => s.status !== "agendado");
+              const horaTarget = bulkTarget(slotsForHora);
+              const horaTitle =
+                horaTarget === "bloqueado"
+                  ? `Bloquear todas as ${String(h).padStart(2, "0")}:00`
+                  : `Liberar todas as ${String(h).padStart(2, "0")}:00`;
+
+              return (
+                <button
+                  type="button"
+                  disabled={!hasChangeableHora}
+                  title={hasChangeableHora ? horaTitle : undefined}
+                  onClick={() => handleBulkHora(h)}
+                  className={[
+                    "flex items-center justify-end pr-2 rounded transition-all duration-150",
+                    "text-[9px] font-mono",
+                    hasChangeableHora
+                      ? "text-white/40 hover:text-primary hover:bg-primary/10 cursor-pointer"
+                      : "text-white/15 cursor-default",
+                  ].join(" ")}
+                >
+                  {String(h).padStart(2, "0")}h
+                </button>
+              );
+            })()}
+
+            {/* Slot buttons */}
             {DIAS.map((d) => {
               const slot = slotMap.get(`${d}:${h}`);
               const status: SlotStatus = slot?.status ?? "bloqueado";
@@ -195,7 +327,7 @@ export function AgendaGrid({
                 <button
                   key={d}
                   type="button"
-                  onClick={() => handleClick(slot)}
+                  onClick={() => handleSlotClick(slot)}
                   disabled={
                     !slot ||
                     (mode === "client" && status !== "disponivel") ||

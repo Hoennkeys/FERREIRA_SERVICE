@@ -1,17 +1,35 @@
 import { useState } from "react";
 import { CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
 import { AgendaGrid } from "@/components/agenda/AgendaGrid";
-import { toggleAdminSlot, type AgendaSlot } from "@/lib/agenda";
+import { bulkToggle, toggleAdminSlot, type AgendaSlot } from "@/lib/agenda";
 
 export function AgendaAdmin() {
   const [open, setOpen] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // ── Individual slot toggle ────────────────────────────────────────────────
 
   async function handleToggle(slot: AgendaSlot) {
     if (slot.status === "agendado") return;
-    setSaving(slot.id);
+    setSaving(true);
     await toggleAdminSlot(slot.id, slot.status);
-    setSaving(null);
+    setSaving(false);
+  }
+
+  // ── Bulk: entire day column ───────────────────────────────────────────────
+
+  async function handleBulkDay(_dia: string, slotsForDay: AgendaSlot[]) {
+    setSaving(true);
+    await bulkToggle(slotsForDay);
+    setSaving(false);
+  }
+
+  // ── Bulk: entire hour row ─────────────────────────────────────────────────
+
+  async function handleBulkHora(_hora: number, slotsForHora: AgendaSlot[]) {
+    setSaving(true);
+    await bulkToggle(slotsForHora);
+    setSaving(false);
   }
 
   return (
@@ -47,15 +65,28 @@ export function AgendaAdmin() {
           style={{ animation: "fade-up 0.2s ease-out" }}
         >
           {/* Admin instructions */}
-          <div className="mb-4 rounded-lg border border-white/8 bg-white/[0.03] px-4 py-3">
-            <p className="text-[11px] text-white/50 leading-relaxed">
-              <span className="text-white/70 font-medium">Como usar:</span> Clique em um slot{" "}
-              <span className="text-cyan-400 font-medium">verde</span> para bloqueá-lo, ou em
-              um slot <span className="text-white/40 font-medium">cinza</span> para
-              liberá-lo novamente. Slots{" "}
-              <span className="text-red-400 font-medium">vermelhos</span> já foram agendados
-              por clientes e não podem ser alterados.
-            </p>
+          <div className="mb-4 rounded-lg border border-white/8 bg-white/[0.03] px-4 py-3 space-y-1.5">
+            <p className="text-[11px] text-white/60 font-medium">Como usar:</p>
+            <ul className="text-[11px] text-white/45 leading-relaxed space-y-1 list-none">
+              <li>
+                <span className="text-cyan-400 font-medium">Slot individual</span> — clique
+                diretamente no quadrado para alternar disponível ↔ bloqueado.
+              </li>
+              <li>
+                <span className="text-primary font-medium">Coluna inteira (dia)</span> — clique
+                no <span className="font-semibold text-white/60">nome do dia</span> no topo
+                (SEG, TER…) para bloquear ou liberar todos os horários daquele dia de uma vez.
+              </li>
+              <li>
+                <span className="text-primary font-medium">Linha inteira (hora)</span> — clique
+                no <span className="font-semibold text-white/60">horário lateral</span> (07h,
+                08h…) para bloquear ou liberar aquele horário em todos os dias da semana.
+              </li>
+              <li>
+                Slots <span className="text-red-400 font-medium">vermelhos</span> já foram
+                agendados e não podem ser alterados.
+              </li>
+            </ul>
           </div>
 
           {saving && (
@@ -68,6 +99,8 @@ export function AgendaAdmin() {
           <AgendaGrid
             mode="admin"
             onAdminToggle={handleToggle}
+            onBulkDay={handleBulkDay}
+            onBulkHora={handleBulkHora}
           />
         </div>
       )}
