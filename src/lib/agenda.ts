@@ -32,6 +32,16 @@ export const DIAS_LABELS: Record<string, string> = {
   Domingo: "DOM",
 };
 
+export const DIAS_FULL_LABELS: Record<string, string> = {
+  Segunda: "Segunda-feira",
+  Terca:   "Terça-feira",
+  Quarta:  "Quarta-feira",
+  Quinta:  "Quinta-feira",
+  Sexta:   "Sexta-feira",
+  Sabado:  "Sábado",
+  Domingo: "Domingo",
+};
+
 /** 7h → 21h inclusive */
 export const HORAS: number[] = Array.from({ length: 15 }, (_, i) => i + 7);
 
@@ -52,24 +62,43 @@ export async function fetchAgenda(): Promise<AgendaSlot[]> {
 }
 
 /**
- * Marca um slot como 'agendado' — apenas se ainda estiver 'disponivel'.
- * A cláusula WHERE status='disponivel' é atomica no Postgres, evitando
- * double-booking sem transação explícita.
- * Returns true if the slot was successfully booked.
+ * Reserva um bloco de N slots de uma vez (ex.: pacote 7h → 7 IDs).
+ *
+ * Estratégia:
+ * 1. UPDATE todos os IDs WHERE status='disponivel' e retorna as linhas afetadas.
+ * 2. Se count < ids.length, houve conflito parcial → rollback dos que foram marcados.
+ * 3. Retorna true somente se TODOS foram reservados com sucesso.
  */
-export async function bookSlot(id: string): Promise<boolean> {
-  const { error, data } = await supabase
+export async function bookSlotBlock(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return false;
+
+  const { data, error } = await supabase
     .from("disponibilidade_agenda")
     .update({ status: "agendado" })
-    .eq("id", id)
+    .in("id", ids)
     .eq("status", "disponivel")
     .select("id");
 
   if (error) {
-    console.warn("[agenda] bookSlot error:", error.message);
+    console.warn("[agenda] bookSlotBlock error:", error.message);
     return false;
   }
-  return (data?.length ?? 0) > 0;
+
+  const booked = (data ?? []) as { id: string }[];
+
+  if (booked.length === ids.length) return true;
+
+  // Parcial: desfaz o que foi reservado para não deixar blocos incompletos
+  if (booked.length > 0) {
+    const rollbackIds = booked.map((r) => r.id);
+    const { error: rbErr } = await supabase
+      .from("disponibilidade_agenda")
+      .update({ status: "disponivel" })
+      .in("id", rollbackIds);
+    if (rbErr) console.warn("[agenda] bookSlotBlock rollback error:", rbErr.message);
+  }
+
+  return false;
 }
 
 /**
