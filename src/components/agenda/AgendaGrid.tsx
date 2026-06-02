@@ -5,8 +5,13 @@ import {
   DIAS,
   DIAS_LABELS,
   HORAS,
+  applyEffectiveStatus,
   fetchAgenda,
+  fetchReservasForWeek,
+  formatWeekRange,
+  getWeekStart,
   subscribeAgenda,
+  subscribeReservas,
   type AgendaSlot,
   type SlotStatus,
 } from "@/lib/agenda";
@@ -159,26 +164,36 @@ export function AgendaGrid({
   const [loading, setLoading] = useState(true);
   const [hoveredDia, setHoveredDia] = useState<string | null>(null);
   const [hoveredHora, setHoveredHora] = useState<number | null>(null);
+  const semanaInicio = getWeekStart();
+
+  const reloadGrid = async (mounted: { current: boolean }) => {
+    const [template, reservas] = await Promise.all([
+      fetchAgenda(),
+      fetchReservasForWeek(semanaInicio),
+    ]);
+    if (mounted.current) {
+      setSlots(applyEffectiveStatus(template, reservas));
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    fetchAgenda().then((data) => {
-      if (mounted) {
-        setSlots(data);
-        setLoading(false);
-      }
+    const mounted = { current: true };
+    void reloadGrid(mounted);
+
+    const agendaChannel = subscribeAgenda(() => {
+      void reloadGrid(mounted);
     });
-    const channel = subscribeAgenda((updated) => {
-      if (!mounted) return;
-      setSlots((prev) =>
-        prev.map((s) => (s.id === updated.id ? { ...s, status: updated.status } : s)),
-      );
+    const reservasChannel = subscribeReservas(semanaInicio, () => {
+      void reloadGrid(mounted);
     });
+
     return () => {
-      mounted = false;
-      channel.unsubscribe();
+      mounted.current = false;
+      agendaChannel.unsubscribe();
+      reservasChannel.unsubscribe();
     };
-  }, []);
+  }, [semanaInicio]);
 
   // ── Lookup map: "dia:hora" → slot ────────────────────────────────────────
   const slotMap = new Map<string, AgendaSlot>();
@@ -262,6 +277,9 @@ export function AgendaGrid({
       }}
     >
       <div className="min-w-[540px]">
+        <p className="mb-3 text-[10px] tracking-[0.14em] text-white/40 font-mono">
+          Semana operacional: {formatWeekRange(semanaInicio)}
+        </p>
 
         {/* ── Day header row ───────────────────────────────────────────── */}
         <div className="grid grid-cols-8 gap-1 mb-1">
