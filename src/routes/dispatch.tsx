@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { AgendaAdmin } from "@/components/admin/AgendaAdmin";
 import { DispatchPanel } from "@/components/admin/DispatchPanel";
 import { AuthPending } from "@/components/auth/AuthPending";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -25,6 +26,8 @@ function DispatchPage() {
     <ProtectedRoute>
       <div className="relative min-h-screen bg-background text-foreground">
         <OperationsDashboard />
+
+        <AgendaAdmin />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 pb-12 flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
