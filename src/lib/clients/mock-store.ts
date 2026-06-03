@@ -2,10 +2,11 @@ import {
   bookSlotsBySchedule,
   getWeekStart,
   releasePedidoReservas,
+  repairOrphanReservas,
   rollbackReservasForPedido,
 } from "../agenda";
 import { dispatchQueueStore } from "../dispatch-queue";
-import { getExpiredClosedClientIds } from "./retention";
+import { getExpiredClosedClientIds, isClosedStatus } from "./retention";
 import type { ClientsStore, ClientsListener } from "./store";
 import type {
   ApproveResult,
@@ -14,6 +15,7 @@ import type {
   CreateOrderInput,
   CreateOrderResult,
   FinalizeResult,
+  RemoveClosedResult,
 } from "./types";
 
 const STORAGE_KEY = "ferreira-clients-mock";
@@ -54,6 +56,16 @@ class MockClientsStore implements ClientsStore {
     const removed = this.purgeExpiredInternal();
     if (removed > 0) this.emit();
     return removed;
+  }
+
+  async repairAgendaSync(): Promise<number> {
+    this.ensureInit();
+    return repairOrphanReservas({
+      validPedidoIds: this.state.clients.map((c) => c.id),
+      closedPedidoIds: this.state.clients
+        .filter((c) => isClosedStatus(c.status))
+        .map((c) => c.id),
+    });
   }
 
   private persist() {
@@ -189,6 +201,30 @@ class MockClientsStore implements ClientsStore {
     };
     this.persist();
     return { ok: true };
+  }
+
+  async removeClosedClient(id: string): Promise<RemoveClosedResult> {
+    this.ensureInit();
+    const client = this.state.clients.find((c) => c.id === id);
+    if (!client) return { ok: false, reason: "not_found" };
+    if (!isClosedStatus(client.status)) return { ok: false, reason: "not_closed" };
+    await this.deleteOrder(id);
+    return { ok: true };
+  }
+
+  async removeAllClosedClients(): Promise<number> {
+    this.ensureInit();
+    const ids = this.state.clients
+      .filter((c) => isClosedStatus(c.status))
+      .map((c) => c.id);
+    for (const id of ids) {
+      await rollbackReservasForPedido(id);
+    }
+    this.state = {
+      clients: this.state.clients.filter((c) => !ids.includes(c.id)),
+    };
+    if (ids.length > 0) this.persist();
+    return ids.length;
   }
 }
 

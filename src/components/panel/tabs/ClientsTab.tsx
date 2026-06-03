@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Check, CheckCircle2, MessageCircle, Users, X } from "lucide-react";
+import { Check, CheckCircle2, MessageCircle, Trash2, Users, X } from "lucide-react";
 
 import { formatWeekRange } from "@/lib/agenda";
 import {
   clientsStore,
   filterVisibleClients,
+  isClosedStatus,
   probePedidosBackend,
   useClients,
   usesCloudPedidos,
@@ -45,25 +46,38 @@ export function ClientsTab() {
   const [successId, setSuccessId] = useState<string | null>(null);
   const [backend, setBackend] = useState<PedidosBackendStatus | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [clearingClosed, setClearingClosed] = useState(false);
 
   useEffect(() => {
-    void clientsStore.purgeExpiredClients();
-    void probePedidosBackend().then(setBackend);
+    void handleRefresh();
   }, []);
 
   async function handleRefresh() {
     setRefreshing(true);
-    const [status] = await Promise.all([
+    setSyncMessage(null);
+    const [status, orphans] = await Promise.all([
       probePedidosBackend(),
-      clientsStore.purgeExpiredClients(),
+      clientsStore.repairAgendaSync(),
     ]);
+    await clientsStore.purgeExpiredClients();
     setBackend(status);
+    if (orphans > 0) {
+      setSyncMessage(
+        `${orphans} horário(s) órfão(s) na agenda foram liberados (pedido encerrado ou ausente).`,
+      );
+    }
     setRefreshing(false);
   }
 
   const retained = filterVisibleClients(clients);
-  const visible = retained.filter((c) => c.status !== "Arquivado");
+  const active = retained.filter(
+    (c) => c.status === "Pendente" || c.status === "Ativo",
+  );
+  /** Finalizado aparece no dashboard principal com botão de excluir. */
+  const finished = retained.filter((c) => c.status === "Finalizado");
   const archived = retained.filter((c) => c.status === "Arquivado");
+  const closedCount = finished.length + archived.length;
 
   async function handleApprove(id: string) {
     setLoadingId(id);
@@ -93,6 +107,29 @@ export function ClientsTab() {
     void clientsStore.archiveClient(id);
   }
 
+  async function handleRemoveClosed(id: string) {
+    setLoadingId(id);
+    setErrorId(null);
+    const result = await clientsStore.removeClosedClient(id);
+    setLoadingId(null);
+    if (!result.ok) setErrorId(id);
+  }
+
+  async function handleRemoveAllClosed() {
+    if (closedCount === 0) return;
+    const confirmed = window.confirm(
+      `Remover ${closedCount} serviço(s) encerrado(s) do painel e liberar horários na agenda?`,
+    );
+    if (!confirmed) return;
+    setClearingClosed(true);
+    setErrorId(null);
+    const removed = await clientsStore.removeAllClosedClients();
+    setClearingClosed(false);
+    if (removed > 0) {
+      setSyncMessage(`${removed} serviço(s) removido(s) do painel.`);
+    }
+  }
+
   return (
     <section>
       <div className="mb-6 flex items-center gap-3">
@@ -107,7 +144,8 @@ export function ClientsTab() {
             Clientes & Contratos Ativos
           </h1>
           <p className="mt-1 text-[10px] text-white/35">
-            Finalizados e arquivados são apagados automaticamente após 5 dias.
+            Encerrados ficam na lista abaixo até você remover ou até 5 dias (limpeza
+            automática).
           </p>
         </div>
       </div>
@@ -124,6 +162,12 @@ export function ClientsTab() {
         </div>
       )}
 
+      {syncMessage && (
+        <div className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3 text-xs text-cyan-200">
+          {syncMessage}
+        </div>
+      )}
+
       <div className="mb-4 flex justify-end">
         <button
           type="button"
@@ -136,7 +180,7 @@ export function ClientsTab() {
       </div>
 
       <div className="space-y-4">
-        {visible.length === 0 ? (
+        {active.length === 0 ? (
           <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e] px-6 py-12 text-center">
             <p className="font-mono text-sm text-white/30">
               // nenhum contrato pendente ou ativo
@@ -148,7 +192,7 @@ export function ClientsTab() {
             </p>
           </div>
         ) : (
-          visible.map((client) => (
+          active.map((client) => (
             <ClientCard
               key={client.id}
               client={client}
@@ -162,23 +206,72 @@ export function ClientsTab() {
           ))
         )}
 
-        {archived.length > 0 && (
-          <div className="pt-4">
-            <p className="mb-3 text-[10px] tracking-[0.18em] text-white/30">
-              ARQUIVADOS · removidos automaticamente após 5 dias
-            </p>
-            <div className="space-y-3 opacity-60">
-              {archived.map((client) => (
+        {finished.length > 0 && (
+          <div className={active.length > 0 ? "pt-4" : ""}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] tracking-[0.18em] text-cyan-400/80">
+                SERVIÇOS FINALIZADOS ({finished.length})
+              </p>
+              {closedCount > 0 && (
+                <button
+                  type="button"
+                  disabled={clearingClosed || loadingId !== null}
+                  onClick={() => void handleRemoveAllClosed()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-red-400/90 transition hover:border-red-500/50 hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {clearingClosed ? "REMOVENDO…" : "LIMPAR ENCERRADOS"}
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {finished.map((client) => (
                 <ClientCard
                   key={client.id}
                   client={client}
-                  loading={false}
-                  error={false}
+                  loading={loadingId === client.id}
+                  error={errorId === client.id}
                   success={false}
                   onApprove={() => {}}
                   onFinalize={() => {}}
                   onArchive={() => {}}
-                  readOnly
+                  onRemove={() => void handleRemoveClosed(client.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {archived.length > 0 && (
+          <div className={active.length > 0 || finished.length > 0 ? "pt-4" : ""}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] tracking-[0.18em] text-white/30">
+                ARQUIVADOS / CANCELADOS ({archived.length})
+              </p>
+              {closedCount > 0 && finished.length === 0 && (
+                <button
+                  type="button"
+                  disabled={clearingClosed || loadingId !== null}
+                  onClick={() => void handleRemoveAllClosed()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-1.5 text-[10px] font-semibold tracking-[0.12em] text-red-400/90 transition hover:border-red-500/50 hover:bg-red-500/10 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  {clearingClosed ? "REMOVENDO…" : "LIMPAR ENCERRADOS"}
+                </button>
+              )}
+            </div>
+            <div className="space-y-3 opacity-80">
+              {archived.map((client) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  loading={loadingId === client.id}
+                  error={errorId === client.id}
+                  success={false}
+                  onApprove={() => {}}
+                  onFinalize={() => {}}
+                  onArchive={() => {}}
+                  onRemove={() => void handleRemoveClosed(client.id)}
                 />
               ))}
             </div>
@@ -197,7 +290,7 @@ function ClientCard({
   onApprove,
   onFinalize,
   onArchive,
-  readOnly = false,
+  onRemove,
 }: {
   client: ContractClient;
   loading: boolean;
@@ -206,9 +299,12 @@ function ClientCard({
   onApprove: () => void;
   onFinalize: () => void;
   onArchive: () => void;
-  readOnly?: boolean;
+  onRemove?: () => void;
 }) {
   const tags = formatAgendaTags(client);
+  const canRemove = isClosedStatus(client.status) && Boolean(onRemove);
+  const isOperational =
+    client.status === "Pendente" || client.status === "Ativo";
 
   return (
     <article className="rounded-2xl border border-zinc-800 bg-[#0c0c0e] p-4 sm:p-5">
@@ -231,8 +327,8 @@ function ClientCard({
           </p>
         </div>
 
-        {!readOnly && (
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          {isOperational && (
             <a
               href={whatsAppHref(client.contato.whatsapp)}
               target="_blank"
@@ -242,43 +338,55 @@ function ClientCard({
               <MessageCircle className="h-3.5 w-3.5" />
               CONVERSAR
             </a>
+          )}
 
-            {client.status === "Pendente" && (
-              <>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={onApprove}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  {loading ? "APROVANDO…" : "APROVAR CONTRATO"}
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={onArchive}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-transparent px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-red-400/80 transition hover:border-red-500/50 hover:bg-red-500/5 disabled:opacity-50"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  RECUSAR/ARQUIVAR
-                </button>
-              </>
-            )}
+          {canRemove && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onRemove}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-red-300 transition hover:border-red-500/60 hover:bg-red-500/15 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {loading ? "REMOVENDO…" : "EXCLUIR SERVIÇO"}
+            </button>
+          )}
 
-            {client.status === "Ativo" && (
+          {isOperational && client.status === "Pendente" && (
+            <>
               <button
                 type="button"
                 disabled={loading}
-                onClick={onFinalize}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-primary transition hover:bg-primary/20 disabled:opacity-50"
+                onClick={onApprove}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50"
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {loading ? "FINALIZANDO…" : "FINALIZAR SERVIÇO"}
+                <Check className="h-3.5 w-3.5" />
+                {loading ? "APROVANDO…" : "APROVAR CONTRATO"}
               </button>
-            )}
-          </div>
-        )}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={onArchive}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-transparent px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-red-400/80 transition hover:border-red-500/50 hover:bg-red-500/5 disabled:opacity-50"
+              >
+                <X className="h-3.5 w-3.5" />
+                RECUSAR/ARQUIVAR
+              </button>
+            </>
+          )}
+
+          {isOperational && client.status === "Ativo" && (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={onFinalize}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-[10px] font-semibold tracking-[0.12em] text-primary transition hover:bg-primary/20 disabled:opacity-50"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              {loading ? "FINALIZANDO…" : "FINALIZAR SERVIÇO"}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
