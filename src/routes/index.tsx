@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { Header } from "@/components/landing/Header";
 import { Hero } from "@/components/landing/Hero";
 import { MetricsStrip } from "@/components/landing/MetricsStrip";
@@ -33,13 +32,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  // #region agent log
-  useEffect(() => {
-    const EP = 'http://127.0.0.1:7583/ingest/04cf47b3-a32f-4a0e-b26f-aac6b6a736d3';
-    fetch(EP, {method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7b787a'},body:JSON.stringify({sessionId:'7b787a',location:'index.tsx:Index',message:'Index route rendered (client)',data:{url:window.location.href},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-  }, []);
-  // #endregion
-
   return (
     <div className="relative min-h-screen bg-background text-foreground">
       <Header />

@@ -8,17 +8,5 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- #region agent log -->
-    <script>
-      (function(){
-        var EP='http://127.0.0.1:7583/ingest/04cf47b3-a32f-4a0e-b26f-aac6b6a736d3';
-        var SID='7b787a';
-        function dbg(msg,data){try{fetch(EP,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':SID},body:JSON.stringify({sessionId:SID,location:'index.html:inline',message:msg,data:data||{},timestamp:Date.now(),hypothesisId:'A'})}).catch(function(){});}catch(e){}}
-        dbg('index.html inline script executed',{userAgent:navigator.userAgent});
-        window.onerror=function(msg,src,line,col,err){dbg('window.onerror',{msg:String(msg),src:src,line:line,col:col,err:err?err.toString():null});};
-        window.addEventListener('unhandledrejection',function(e){dbg('unhandledrejection',{reason:e.reason?String(e.reason):null});});
-      })();
-    </script>
-    <!-- #endregion -->
   </body>
 </html>

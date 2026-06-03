@@ -88,13 +88,6 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext()
 
-  // #region agent log
-  useEffect(() => {
-    const EP = 'http://127.0.0.1:7583/ingest/04cf47b3-a32f-4a0e-b26f-aac6b6a736d3';
-    fetch(EP, {method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7b787a'},body:JSON.stringify({sessionId:'7b787a',location:'__root.tsx:RootComponent',message:'RootComponent mounted (client)',data:{url:window.location.href},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
-  }, []);
-  // #endregion
-
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
