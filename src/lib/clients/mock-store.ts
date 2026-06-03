@@ -126,10 +126,10 @@ class MockClientsStore implements ClientsStore {
     };
     this.state = { clients: [client, ...this.state.clients] };
     this.persist();
-    return { ok: true, id };
+    return { ok: true, id, claimToken: crypto.randomUUID() };
   }
 
-  async deleteOrder(id: string): Promise<void> {
+  async deleteOrder(id: string, _options?: { claimToken?: string }): Promise<void> {
     this.ensureInit();
     await rollbackReservasForPedido(id);
     this.state = {

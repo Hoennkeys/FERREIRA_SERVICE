@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, MessageCircle, Calendar, ChevronLeft, Loader2, Copy } from "lucide-react";
 import { createStaticPix, hasError } from "pix-utils";
 import type { Pkg } from "./Pricing";
@@ -128,6 +128,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [copyCopied, setCopyCopied] = useState(false);
   const [pixGenFailed, setPixGenFailed] = useState(false);
+  const pendingOrderRef = useRef<{ id: string; claimToken: string } | null>(null);
 
   useEffect(() => {
     if (pkg) {
@@ -255,16 +256,24 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
         setBackendStatus({
           status: "setup",
           message:
-            'Tabela "pedidos_cliente" ausente. Execute supabase/setup.sql no Supabase.',
+            'Backend indisponível. Execute supabase/setup.sql e supabase/migrations/security_phase1_rls.sql no Supabase.',
         });
       }
       return;
     }
 
+    pendingOrderRef.current = {
+      id: orderResult.id,
+      claimToken: orderResult.claimToken,
+    };
+
     const booked = await bookSlotBlock(slotIds, orderResult.id, semanaInicio);
 
     if (!booked) {
-      await clientsStore.deleteOrder(orderResult.id);
+      await clientsStore.deleteOrder(orderResult.id, {
+        claimToken: orderResult.claimToken,
+      });
+      pendingOrderRef.current = null;
       setBooking(false);
       setSelectedBlock(null);
       setConfirmError("slot");
@@ -272,6 +281,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     }
 
     setBooking(false);
+    pendingOrderRef.current = null;
 
     const dia = selectedBlock[0].dia_da_semana;
     const horaInicio = selectedBlock[0].hora_inicio;

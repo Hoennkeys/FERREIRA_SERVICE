@@ -3,6 +3,7 @@ import type {
   ClientsState,
   CreateOrderInput,
   CreateOrderResult,
+  DeleteOrderOptions,
   FinalizeResult,
   RemoveClosedResult,
 } from "./types";
@@ -13,7 +14,7 @@ export interface ClientsStore {
   getState(): ClientsState;
   subscribe(listener: ClientsListener): () => void;
   createOrder(input: CreateOrderInput): Promise<CreateOrderResult>;
-  deleteOrder(id: string): Promise<void>;
+  deleteOrder(id: string, options?: DeleteOrderOptions): Promise<void>;
   approveClient(id: string): Promise<ApproveResult>;
   archiveClient(id: string): Promise<void>;
   finalizeClient(id: string): Promise<FinalizeResult>;
