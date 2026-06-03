@@ -9,7 +9,11 @@ import {
   getWeekStart,
   type AgendaSlot,
 } from "@/lib/agenda";
-import { clientsStore } from "@/lib/clients";
+import {
+  clientsStore,
+  probePedidosBackend,
+  type PedidosBackendStatus,
+} from "@/lib/clients";
 
 const WHATSAPP = "5581982180780";
 
@@ -30,7 +34,13 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   const [step, setStep] = useState<Step>(0);
   const [selectedBlock, setSelectedBlock] = useState<AgendaSlot[] | null>(null);
   const [booking, setBooking] = useState(false);
-  const [confirmError, setConfirmError] = useState<"order" | "slot" | "setup" | null>(null);
+  const [confirmError, setConfirmError] = useState<
+    "order" | "slot" | "setup" | "backend" | null
+  >(null);
+  const [backendStatus, setBackendStatus] = useState<PedidosBackendStatus | null>(
+    null,
+  );
+  const [backendChecking, setBackendChecking] = useState(false);
 
   useEffect(() => {
     if (pkg) {
@@ -48,6 +58,23 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (step !== 1) return;
+    let cancelled = false;
+    setBackendChecking(true);
+    void probePedidosBackend().then((status) => {
+      if (cancelled) return;
+      setBackendStatus(status);
+      setBackendChecking(false);
+      if (status.status !== "ready") {
+        setConfirmError("backend");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step]);
 
   if (!pkg) return null;
 
@@ -76,6 +103,13 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
 
   async function onConfirmSlot() {
     if (!selectedBlock || selectedBlock.length === 0) return;
+
+    const backend = backendStatus ?? (await probePedidosBackend());
+    setBackendStatus(backend);
+    if (backend.status !== "ready") {
+      setConfirmError("backend");
+      return;
+    }
 
     setBooking(true);
     setConfirmError(null);
@@ -106,7 +140,16 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
 
     if (!orderResult.ok) {
       setBooking(false);
-      setConfirmError(orderResult.reason === "setup" ? "setup" : "order");
+      setConfirmError(
+        orderResult.reason === "setup" ? "setup" : "order",
+      );
+      if (orderResult.reason === "setup") {
+        setBackendStatus({
+          status: "setup",
+          message:
+            'Tabela "pedidos_cliente" ausente. Execute supabase/setup.sql no Supabase.',
+        });
+      }
       return;
     }
 
@@ -267,16 +310,25 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               selectedBlockIds={selectedBlock?.map((s) => s.id)}
               onSelect={(block) => {
                 setSelectedBlock(block);
-                setConfirmError(null);
+                if (confirmError === "slot") setConfirmError(null);
               }}
             />
 
+            {backendChecking && (
+              <p className="mt-3 text-xs text-white/45">Verificando conexão com o sistema…</p>
+            )}
+            {confirmError === "backend" && backendStatus && backendStatus.status !== "ready" && (
+              <p className="mt-3 text-xs text-amber-400">
+                Pedido indisponível no momento: {backendStatus.message} O operador precisa
+                corrigir o banco antes de novos agendamentos aparecerem no painel.
+              </p>
+            )}
             {confirmError === "setup" && (
               <p className="mt-3 text-xs text-amber-400">
-                Banco parcialmente configurado. Pedidos funcionam em modo local neste
-                navegador. Para persistir no Supabase, rode{" "}
-                <code className="text-amber-200">npm run db:setup</code> ou execute{" "}
-                <code className="text-amber-200">supabase/setup.sql</code> no dashboard.
+                Banco de pedidos não configurado. Execute{" "}
+                <code className="text-amber-200">npm run db:setup</code> ou{" "}
+                <code className="text-amber-200">supabase/setup.sql</code> no dashboard do
+                Supabase — sem isso o pedido não aparece em Contratos Ativos.
               </p>
             )}
             {confirmError === "slot" && (
@@ -320,7 +372,13 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               <button
                 type="button"
                 onClick={onConfirmSlot}
-                disabled={!selectedBlock || selectedBlock.length === 0 || booking}
+                disabled={
+                  !selectedBlock ||
+                  selectedBlock.length === 0 ||
+                  booking ||
+                  backendChecking ||
+                  backendStatus?.status !== "ready"
+                }
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[0_0_30px_rgba(0,149,255,0.5)] transition hover:bg-primary/90 hover:shadow-[0_0_50px_rgba(0,149,255,0.7)] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 {booking ? (
