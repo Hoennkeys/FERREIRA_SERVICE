@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import {
+  AgendaClientMobile,
+  AgendaClientMobileSkeleton,
+} from "@/components/agenda/AgendaClientMobile";
+import {
   DIAS,
   DIAS_LABELS,
   HORAS,
@@ -65,10 +69,30 @@ function adminSlotClass(status: SlotStatus): string {
 
 // ── Loading skeleton ─────────────────────────────────────────────────────────
 
-function GridSkeleton() {
+function GridSkeleton({ mode }: { mode: "client" | "admin" }) {
+  if (mode === "client") {
+    return (
+      <>
+        <div className="md:hidden">
+          <AgendaClientMobileSkeleton />
+        </div>
+        <div className="hidden md:block w-full overflow-x-auto">
+          <DesktopGridSkeleton />
+        </div>
+      </>
+    );
+  }
+
   return (
     <div className="w-full overflow-x-auto">
-      <div className="min-w-[540px]">
+      <DesktopGridSkeleton />
+    </div>
+  );
+}
+
+function DesktopGridSkeleton() {
+  return (
+    <div className="min-w-[540px]">
         <div className="grid grid-cols-8 gap-1 mb-1">
           <div />
           {DIAS.map((d) => (
@@ -93,7 +117,6 @@ function GridSkeleton() {
             ))}
           </div>
         ))}
-      </div>
     </div>
   );
 }
@@ -263,13 +286,13 @@ export function AgendaGrid({
   const selIdSet = new Set(selectedBlockIds ?? []);
   const selStart = selectedBlockIds?.[0] ?? null;
 
-  if (loading) return <GridSkeleton />;
+  if (loading) return <GridSkeleton mode={mode} />;
 
   const isAdmin = mode === "admin";
 
-  return (
+  const desktopGrid = (
     <div
-      className="w-full overflow-x-auto"
+      className={isAdmin ? "w-full overflow-x-auto" : "hidden md:block w-full overflow-x-auto"}
       onMouseLeave={() => {
         if (!isAdmin) {
           setHoveredDia(null);
@@ -433,8 +456,33 @@ export function AgendaGrid({
           </div>
         ))}
       </div>
-
-      <Legend mode={mode} duracao={duracao} />
     </div>
+  );
+
+  if (isAdmin) {
+    return (
+      <>
+        {desktopGrid}
+        <Legend mode={mode} duracao={duracao} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="md:hidden">
+        <AgendaClientMobile
+          semanaInicio={semanaInicio}
+          duracao={duracao}
+          slotMap={slotMap}
+          selectedBlockIds={selectedBlockIds}
+          isValidStart={isValidStart}
+          getBlock={getBlock}
+          onSelect={onSelect}
+        />
+      </div>
+      {desktopGrid}
+      <Legend mode={mode} duracao={duracao} />
+    </>
   );
 }
