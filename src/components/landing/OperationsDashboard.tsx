@@ -7,9 +7,8 @@ import {
   DEFAULT_BASE_XP_HOUR,
 } from "@/lib/live-session";
 import { useTelemetryTimer } from "@/hooks/use-telemetry-timer";
+import { TWITCH_URL } from "@/lib/twitch";
 import { Reveal } from "./Reveal";
-
-const TWITCH_URL = "https://twitch.tv/ferreiranavoz";
 
 export function OperationsDashboard({ embedded = false }: { embedded?: boolean }) {
   const session = useLiveSession();
