@@ -1,6 +1,10 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { supabase } from "./supabase";
+import { isSupabaseConfigured, supabase } from "./supabase";
 import { isMissingTableError } from "./supabase-errors";
+
+function allowReservasLocalFallback(): boolean {
+  return !isSupabaseConfigured();
+}
 
 const LOCAL_RESERVAS_KEY = "ferreira-reservas-semana";
 
@@ -247,12 +251,15 @@ export async function fetchReservasForWeek(
     .eq("semana_inicio", semanaInicio);
 
   if (error) {
-    if (isMissingTableError(error.code, error.message)) {
+    if (isMissingTableError(error.code, error.message) && allowReservasLocalFallback()) {
       reservasUseLocalFallback = true;
       console.warn(
         "[agenda] reservas_semana ausente — usando reservas locais (rode npm run db:setup)",
       );
       return readLocalReservasForWeek(semanaInicio);
+    }
+    if (isMissingTableError(error.code, error.message)) {
+      console.warn("[agenda] reservas_semana ausente — execute supabase/setup.sql");
     }
     console.warn("[agenda] fetchReservasForWeek error:", error.message);
     return [];
@@ -342,7 +349,7 @@ export async function bookSlotBlock(
   const { error } = await supabase.from("reservas_semana").insert(rows);
 
   if (error) {
-    if (isMissingTableError(error.code, error.message)) {
+    if (isMissingTableError(error.code, error.message) && allowReservasLocalFallback()) {
       reservasUseLocalFallback = true;
       return insertLocalReservas(rows);
     }
@@ -363,7 +370,7 @@ export async function rollbackReservasForPedido(pedidoId: string): Promise<void>
     .delete()
     .eq("pedido_id", pedidoId);
   if (error) {
-    if (isMissingTableError(error.code, error.message)) {
+    if (isMissingTableError(error.code, error.message) && allowReservasLocalFallback()) {
       reservasUseLocalFallback = true;
       deleteLocalReservasForPedido(pedidoId);
       return;

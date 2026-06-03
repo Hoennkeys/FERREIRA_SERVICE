@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { filterVisibleClients, useClients } from "@/lib/clients";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +32,13 @@ type PanelSidebarProps = {
 
 export function PanelSidebar({ activeTab, onTabChange }: PanelSidebarProps) {
   const navigate = useNavigate();
+  const { clients } = useClients();
   const [operatorEmail, setOperatorEmail] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+
+  const pendingCount = filterVisibleClients(clients).filter(
+    (c) => c.status === "Pendente",
+  ).length;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -87,6 +93,11 @@ export function PanelSidebar({ activeTab, onTabChange }: PanelSidebarProps) {
             >
               <Icon className="h-5 w-5 shrink-0" />
               <span className="hidden text-sm font-medium md:inline">{label}</span>
+              {id === "clients" && pendingCount > 0 && (
+                <span className="ml-auto hidden min-w-[1.25rem] rounded-full bg-amber-500/20 px-1.5 py-0.5 text-center text-[10px] font-bold text-amber-300 md:inline">
+                  {pendingCount}
+                </span>
+              )}
             </button>
           );
         })}

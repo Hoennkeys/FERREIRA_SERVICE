@@ -8,7 +8,7 @@ import { WhatsAppTab } from "./tabs/WhatsAppTab";
 import type { PanelTab } from "./types";
 
 export function PanelLayout() {
-  const [activeTab, setActiveTab] = useState<PanelTab>("telemetry");
+  const [activeTab, setActiveTab] = useState<PanelTab>("clients");
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#060606] text-foreground">
