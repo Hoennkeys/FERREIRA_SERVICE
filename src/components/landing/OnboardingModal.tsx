@@ -129,12 +129,25 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     const fmtInicio = `${String(horaInicio).padStart(2, "0")}:00`;
     const fmtFim = `${String(horaFim).padStart(2, "0")}:00`;
 
-    const msg =
-      `Olá Ferreira! Quero contratar o ${p.name} (${p.hours}). ` +
-      `Dados da Operação: • Char: ${char} • Mundo: ${world} • Level: ${level}. ` +
-      `WhatsApp: ${whatsapp.trim()}. ` +
-      (discord.trim() ? `Discord: ${discord.trim()}. ` : "") +
-      `Horário: ${diaFull} das ${fmtInicio} às ${fmtFim} (Total: ${selectedBlock.length}h).`;
+    const msg = ` *FERREIRA SERVICES*
+
+     Olá Ferreira! Quero contratar um serviço.
+
+     *DADOS DA OPERAÇÃO:*
+     *Serviço:* ${p.name} (${p.hours})
+     *Char:* ${char}
+     *Mundo:* ${world}
+     *Level:* ${level}
+
+     *AGENDAMENTO:*
+     *Horário:* ${diaFull} das ${fmtInicio} às ${fmtFim} (Total: ${selectedBlock.length}h)
+
+     *CONTATOS:*
+     *WhatsApp:* ${whatsapp.trim()}
+    ${discord.trim() ? `     *Discord:* ${discord.trim()}` : ""}
+
+    --------------------------------
+    Formulário enviado via https://ferreiraservice.vercel.app/ `;
 
     const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank", "noopener,noreferrer");
@@ -188,7 +201,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
             style={{ animation: "fade-up 0.25s ease-out" }}
           >
             <Field
-              label="Seu Nome (opcional)"
+              label="Seu Nome"
               value={nome}
               onChange={setNome}
               placeholder="Ex: Carlos Silva"
