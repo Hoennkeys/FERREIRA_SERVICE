@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "db:setup": "node scripts/apply-supabase-setup.mjs"
+    "db:setup": "node scripts/apply-supabase-setup.mjs",
+    "twitch:check": "node scripts/check-twitch-live.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
