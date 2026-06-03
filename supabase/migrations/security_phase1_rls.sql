@@ -71,7 +71,28 @@ create policy "pedidos_delete_admin"
   to authenticated
   using (public.is_admin());
 
--- ── 5. Policies novas — reservas_semana ────────────────────────
+-- ── 5. Helper: checar pedido para reserva (anon não pode SELECT pedidos) ─
+
+create or replace function public.pedido_allows_homepage_reserva(p_pedido_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.pedidos_cliente
+    where id = p_pedido_id
+      and status = 'Pendente'
+      and origem = 'homepage'
+  );
+$$;
+
+revoke all on function public.pedido_allows_homepage_reserva(uuid) from public;
+grant execute on function public.pedido_allows_homepage_reserva(uuid) to anon, authenticated;
+
+-- ── 6. Policies novas — reservas_semana ────────────────────────
 
 create policy "reservas_select_public"
   on public.reservas_semana for select
@@ -80,15 +101,7 @@ create policy "reservas_select_public"
 create policy "reservas_insert_homepage"
   on public.reservas_semana for insert
   to anon, authenticated
-  with check (
-    exists (
-      select 1
-      from public.pedidos_cliente p
-      where p.id = pedido_id
-        and p.status = 'Pendente'
-        and p.origem = 'homepage'
-    )
-  );
+  with check (public.pedido_allows_homepage_reserva(pedido_id));
 
 create policy "reservas_update_admin"
   on public.reservas_semana for update
@@ -101,7 +114,7 @@ create policy "reservas_delete_admin"
   to authenticated
   using (public.is_admin());
 
--- ── 6. Policies — disponibilidade_agenda ───────────────────────
+-- ── 7. Policies — disponibilidade_agenda ───────────────────────
 
 drop policy if exists "agenda_select_public" on public.disponibilidade_agenda;
 create policy "agenda_select_public"
@@ -122,7 +135,7 @@ create policy "agenda_book_anon"
   using (status = 'disponivel')
   with check (status = 'agendado');
 
--- ── 7. RPC: criar pedido na homepage ─────────────────────────
+-- ── 8. RPC: criar pedido na homepage ─────────────────────────
 
 create or replace function public.create_pedido_homepage(
   p_nome text,
@@ -204,7 +217,7 @@ begin
 end;
 $$;
 
--- ── 8. RPC: rollback pedido homepage (reservas + pedido) ───────
+-- ── 9. RPC: rollback pedido homepage (reservas + pedido) ───────
 
 create or replace function public.rollback_pedido_homepage(
   p_id uuid,
@@ -242,7 +255,7 @@ revoke all on function public.rollback_pedido_homepage from public;
 grant execute on function public.create_pedido_homepage to anon, authenticated;
 grant execute on function public.rollback_pedido_homepage to anon, authenticated;
 
--- ── 9. Seed admin ──────────────────────────────────────────────
+-- ── 10. Seed admin ─────────────────────────────────────────────
 
 insert into public.admin_allowlist (email)
 values ('hoennkeys@gmail.com')
