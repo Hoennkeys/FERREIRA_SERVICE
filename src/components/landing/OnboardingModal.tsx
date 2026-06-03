@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { X, MessageCircle, Calendar, ChevronLeft, Loader2 } from "lucide-react";
+import { X, MessageCircle, Calendar, ChevronLeft, Loader2, Copy } from "lucide-react";
+import { createStaticPix, hasError } from "pix-utils";
 import type { Pkg } from "./Pricing";
 import { AgendaGrid } from "@/components/agenda/AgendaGrid";
 import {
@@ -17,11 +18,93 @@ import {
 
 const WHATSAPP = "5581982180780";
 
-type Step = 0 | 1;
+const PIX_KEY = "+5581982180780";
+const PIX_MERCHANT_NAME = "Lucas F F da Silva";
+const PIX_MERCHANT_CITY = "Recife";
+
+type Step = 0 | 1 | 2;
 
 function isValidWhatsApp(phone: string): boolean {
   const digits = phone.replace(/\D/g, "");
   return digits.length >= 10;
+}
+
+function parsePkgPriceToNumber(price: string): number {
+  const normalized = price.replace(/[^\d,]/g, "").replace(",", ".");
+  return parseFloat(normalized) || 0;
+}
+
+/** BR Code: descrição no campo da chave (máx. 25 caracteres). */
+function pixInfoAdicional(pkg: Pkg): string {
+  const label = `Ferreira ${pkg.name.replace(/^Pacote\s+/i, "")}`;
+  return label.slice(0, 25);
+}
+
+function generatePixBrCode(pkg: Pkg): string | null {
+  const pix = createStaticPix({
+    merchantName: PIX_MERCHANT_NAME,
+    merchantCity: PIX_MERCHANT_CITY,
+    pixKey: PIX_KEY,
+    transactionAmount: parsePkgPriceToNumber(pkg.price),
+    infoAdicional: pixInfoAdicional(pkg),
+  });
+  if (hasError(pix)) return null;
+  return pix.toBRCode();
+}
+
+function buildWhatsAppMessage(params: {
+  pkg: Pkg;
+  char: string;
+  world: string;
+  level: string;
+  whatsapp: string;
+  discord: string;
+  diaFull: string;
+  fmtInicio: string;
+  fmtFim: string;
+  blockHours: number;
+  includePixStatus: boolean;
+}): string {
+  const {
+    pkg: p,
+    char,
+    world,
+    level,
+    whatsapp,
+    discord,
+    diaFull,
+    fmtInicio,
+    fmtFim,
+    blockHours,
+    includePixStatus,
+  } = params;
+
+  const pixHeader = includePixStatus
+    ? `💰 *[STATUS: PIX COPIA E COLA GERADO NO VALOR DE ${p.price}]*
+*(Por favor, anexe o comprovante nesta conversa)*
+
+`
+    : "";
+
+  return `${pixHeader}*FERREIRA SERVICES*
+
+     Olá Ferreira! Quero contratar um serviço.
+
+     *DADOS DA OPERAÇÃO:*
+     *Serviço:* ${p.name} (${p.hours})
+     *Char:* ${char}
+     *Mundo:* ${world}
+     *Level:* ${level}
+
+     *AGENDAMENTO:*
+     *Horário:* ${diaFull} das ${fmtInicio} às ${fmtFim} (Total: ${blockHours}h)
+
+     *CONTATOS:*
+     *WhatsApp:* ${whatsapp.trim()}
+    ${discord.trim() ? `     *Discord:* ${discord.trim()}` : ""}
+
+    --------------------------------
+    Formulário enviado via https://ferreiraservice.vercel.app/ `;
 }
 
 export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: () => void }) {
@@ -41,6 +124,10 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     null,
   );
   const [backendChecking, setBackendChecking] = useState(false);
+  const [pixBrCode, setPixBrCode] = useState<string | null>(null);
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
+  const [copyCopied, setCopyCopied] = useState(false);
+  const [pixGenFailed, setPixGenFailed] = useState(false);
 
   useEffect(() => {
     if (pkg) {
@@ -84,6 +171,10 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     setStep(0);
     setSelectedBlock(null);
     setConfirmError(null);
+    setPixBrCode(null);
+    setWhatsappUrl(null);
+    setCopyCopied(false);
+    setPixGenFailed(false);
     setNome("");
     setWhatsapp("");
     setDiscord("");
@@ -91,6 +182,23 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     setWorld("");
     setLevel("");
     onClose();
+  }
+
+  async function onCopyPix() {
+    if (!pixBrCode) return;
+    try {
+      await navigator.clipboard.writeText(pixBrCode);
+      setCopyCopied(true);
+      setTimeout(() => setCopyCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  function openWhatsApp() {
+    if (!whatsappUrl) return;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    handleClose();
   }
 
   function onSubmitForm(e: FormEvent) {
@@ -172,29 +280,25 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     const fmtInicio = `${String(horaInicio).padStart(2, "0")}:00`;
     const fmtFim = `${String(horaFim).padStart(2, "0")}:00`;
 
-    const msg = ` *FERREIRA SERVICES*
+    const brCode = generatePixBrCode(p);
+    const msg = buildWhatsAppMessage({
+      pkg: p,
+      char,
+      world,
+      level,
+      whatsapp,
+      discord,
+      diaFull,
+      fmtInicio,
+      fmtFim,
+      blockHours: selectedBlock.length,
+      includePixStatus: brCode !== null,
+    });
 
-     Olá Ferreira! Quero contratar um serviço.
-
-     *DADOS DA OPERAÇÃO:*
-     *Serviço:* ${p.name} (${p.hours})
-     *Char:* ${char}
-     *Mundo:* ${world}
-     *Level:* ${level}
-
-     *AGENDAMENTO:*
-     *Horário:* ${diaFull} das ${fmtInicio} às ${fmtFim} (Total: ${selectedBlock.length}h)
-
-     *CONTATOS:*
-     *WhatsApp:* ${whatsapp.trim()}
-    ${discord.trim() ? `     *Discord:* ${discord.trim()}` : ""}
-
-    --------------------------------
-    Formulário enviado via https://ferreiraservice.vercel.app/ `;
-
-    const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    handleClose();
+    setPixBrCode(brCode);
+    setPixGenFailed(brCode === null);
+    setWhatsappUrl(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`);
+    setStep(2);
   }
 
   const panelClass = step === 0 ? "w-full sm:max-w-md" : "w-full sm:max-w-2xl";
@@ -224,7 +328,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
         </button>
 
         <div className="text-[10px] tracking-[0.22em] text-primary">
-          {step === 0 ? "ONBOARDING" : "AGENDAMENTO"}
+          {step === 0 ? "ONBOARDING" : step === 1 ? "AGENDAMENTO" : "PAGAMENTO"}
         </div>
         <h3 className="mt-1.5 text-xl font-semibold text-white">{pkg.name}</h3>
         <p className="mt-1 text-sm text-white/55">
@@ -234,7 +338,9 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
         <div className="mt-4 flex items-center gap-2">
           <StepDot active={step === 0} done={step > 0} label="Dados" />
           <div className="flex-1 h-px bg-white/10" />
-          <StepDot active={step === 1} done={false} label="Horário" />
+          <StepDot active={step === 1} done={step > 1} label="Horário" />
+          <div className="flex-1 h-px bg-white/10" />
+          <StepDot active={step === 2} done={false} label="Pagamento" />
         </div>
 
         {step === 0 && (
@@ -384,11 +490,66 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
                 {booking ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <MessageCircle className="h-4 w-4" />
+                  <Calendar className="h-4 w-4" />
                 )}
-                {booking ? "Reservando..." : "Confirmar e Abrir WhatsApp"}
+                {booking ? "Reservando..." : "Confirmar e Pagar com Pix"}
               </button>
             </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="mt-6 space-y-4" style={{ animation: "fade-up 0.25s ease-out" }}>
+            <div className="text-center">
+              <p className="text-xs text-white/50">Valor total da operação</p>
+              <p className="mt-1 text-3xl font-semibold text-white">{pkg.price}</p>
+            </div>
+
+            {pixGenFailed ? (
+              <p className="text-xs text-red-400 text-center">
+                Não foi possível gerar o código Pix automaticamente. Entre em contato pelo
+                WhatsApp para receber os dados de pagamento.
+              </p>
+            ) : (
+              <>
+                <label className="block">
+                  <span className="text-[10px] tracking-[0.18em] text-white/50">
+                    Pix Copia e Cola
+                  </span>
+                  <textarea
+                    readOnly
+                    rows={4}
+                    value={pixBrCode ?? ""}
+                    className="mt-1.5 w-full resize-none rounded-lg border border-white/10 bg-black/40 px-3.5 py-2.5 text-xs font-mono text-white/80 outline-none"
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={onCopyPix}
+                  disabled={!pixBrCode}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/10 py-3 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Copy className="h-4 w-4" />
+                  {copyCopied ? "Copiado! 🎉" : "Copiar Código Pix"}
+                </button>
+              </>
+            )}
+
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+              Após realizar o pagamento no app do seu banco, clique no botão abaixo para
+              enviar o comprovante pelo WhatsApp.
+            </div>
+
+            <button
+              type="button"
+              onClick={openWhatsApp}
+              disabled={!whatsappUrl}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_0_30px_rgba(0,149,255,0.5)] transition hover:bg-primary/90 hover:shadow-[0_0_50px_rgba(0,149,255,0.7)] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Enviar comprovante no WhatsApp
+            </button>
           </div>
         )}
       </div>
