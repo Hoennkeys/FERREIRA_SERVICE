@@ -5,9 +5,12 @@ import { formatWeekRange } from "@/lib/agenda";
 import {
   clientsStore,
   filterVisibleClients,
+  probePedidosBackend,
   useClients,
+  usesCloudPedidos,
   type ClientStatus,
   type ContractClient,
+  type PedidosBackendStatus,
 } from "@/lib/clients";
 import { cn } from "@/lib/utils";
 
@@ -40,10 +43,23 @@ export function ClientsTab() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errorId, setErrorId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [backend, setBackend] = useState<PedidosBackendStatus | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     void clientsStore.purgeExpiredClients();
+    void probePedidosBackend().then(setBackend);
   }, []);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    const [status] = await Promise.all([
+      probePedidosBackend(),
+      clientsStore.purgeExpiredClients(),
+    ]);
+    setBackend(status);
+    setRefreshing(false);
+  }
 
   const retained = filterVisibleClients(clients);
   const visible = retained.filter((c) => c.status !== "Arquivado");
@@ -96,11 +112,39 @@ export function ClientsTab() {
         </div>
       </div>
 
+      {backend && backend.status !== "ready" && (
+        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+          <p className="font-semibold tracking-wide">PEDIDOS NÃO SINCRONIZAM COM O PAINEL</p>
+          <p className="mt-1 text-amber-200/80">{backend.message}</p>
+          {!usesCloudPedidos() && (
+            <p className="mt-2 text-amber-200/70">
+              Modo local ativo: pedidos feitos no site ficam só no navegador do cliente.
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => void handleRefresh()}
+          disabled={refreshing}
+          className="rounded-lg border border-zinc-700 px-3 py-1.5 text-[10px] font-semibold tracking-[0.14em] text-white/50 transition hover:border-cyan-500/30 hover:text-cyan-300 disabled:opacity-50"
+        >
+          {refreshing ? "ATUALIZANDO…" : "ATUALIZAR LISTA"}
+        </button>
+      </div>
+
       <div className="space-y-4">
         {visible.length === 0 ? (
           <div className="rounded-2xl border border-zinc-800 bg-[#0c0c0e] px-6 py-12 text-center">
             <p className="font-mono text-sm text-white/30">
               // nenhum contrato pendente ou ativo
+            </p>
+            <p className="mt-2 text-[10px] text-white/25">
+              Novos pedidos da homepage aparecem aqui como{" "}
+              <span className="text-amber-400/90">PENDENTE</span> — use Atualizar lista
+              após receber WhatsApp.
             </p>
           </div>
         ) : (

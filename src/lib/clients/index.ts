@@ -39,3 +39,4 @@ export {
   filterVisibleClients,
   isExpiredClosedClient,
 } from "./retention";
+export { probePedidosBackend, usesCloudPedidos, type PedidosBackendStatus } from "./backend";
