@@ -23,7 +23,7 @@ const SOCIALS = [
     href: "https://www.twitch.tv/ferreiranavoz",
     icon: Twitch,
     color: "#6441a5",
-    handle: "@ferreiranavoz",
+    handle: "Ferreira na Voz",
   },
   {
     id: "instagram",
@@ -36,10 +36,10 @@ const SOCIALS = [
   {
     id: "discord",
     label: "Discord",
-    href: "https://discord.gg/ferreirinhz",
+    href: "https://discord.gg/wvQwEpmYX",
     icon: DiscordIcon,
     color: "#5865F2",
-    handle: "Ferreirinhz",
+    handle: "Ferreira Services Discord",
   },
 ] as const;
 
