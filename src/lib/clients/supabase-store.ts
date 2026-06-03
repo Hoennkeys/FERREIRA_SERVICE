@@ -2,8 +2,10 @@ import { supabase } from "../supabase";
 import {
   bookSlotsBySchedule,
   releasePedidoReservas,
+  repairOrphanReservas,
   rollbackReservasForPedido,
 } from "../agenda";
+import { isClosedStatus } from "./retention";
 import { isMissingTableError } from "../supabase-errors";
 import { dispatchQueueStore } from "../dispatch-queue";
 import { retentionCutoffIso } from "./retention";
@@ -16,6 +18,7 @@ import {
   type CreateOrderResult,
   type FinalizeResult,
   type PedidoRow,
+  type RemoveClosedResult,
 } from "./types";
 
 const TABLE = "pedidos_cliente";
@@ -58,8 +61,13 @@ class SupabaseClientsStore implements ClientsStore {
   }
 
   private async fetchAll() {
+    await this.repairAgendaSync();
     await this.purgeExpiredInternal();
     await this.reload();
+  }
+
+  async repairAgendaSync(): Promise<number> {
+    return repairOrphanReservas();
   }
 
   private async purgeExpiredInternal(): Promise<number> {
@@ -227,6 +235,26 @@ class SupabaseClientsStore implements ClientsStore {
 
     await this.fetchAll();
     return { ok: true };
+  }
+
+  async removeClosedClient(id: string): Promise<RemoveClosedResult> {
+    const client = this.state.clients.find((c) => c.id === id);
+    if (!client) return { ok: false, reason: "not_found" };
+    if (!isClosedStatus(client.status)) return { ok: false, reason: "not_closed" };
+    await this.deleteOrder(id);
+    return { ok: true };
+  }
+
+  async removeAllClosedClients(): Promise<number> {
+    const ids = this.state.clients
+      .filter((c) => isClosedStatus(c.status))
+      .map((c) => c.id);
+    for (const id of ids) {
+      await rollbackReservasForPedido(id);
+      await supabase.from(TABLE).delete().eq("id", id);
+    }
+    if (ids.length > 0) await this.reload();
+    return ids.length;
   }
 }
 

@@ -65,6 +65,10 @@ export type FinalizeResult =
   | { ok: true }
   | { ok: false; reason: "not_found" | "invalid_status" };
 
+export type RemoveClosedResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "not_closed" };
+
 /** DB row shape */
 export type PedidoRow = {
   id: string;

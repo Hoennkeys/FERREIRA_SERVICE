@@ -379,6 +379,81 @@ export async function rollbackReservasForPedido(pedidoId: string): Promise<void>
   }
 }
 
+/**
+ * Remove reservas `ativa` ligadas a pedidos inexistentes, finalizados ou arquivados.
+ * Corrige agenda vermelha sem contrato pendente/ativo no painel.
+ */
+export async function repairOrphanReservas(
+  localContext?: {
+    validPedidoIds: Iterable<string>;
+    closedPedidoIds: Iterable<string>;
+  },
+): Promise<number> {
+  if (reservasUseLocalFallback) {
+    if (!localContext) return 0;
+    const valid = new Set(localContext.validPedidoIds);
+    const closed = new Set(localContext.closedPedidoIds);
+    const all = readLocalReservasAll();
+    const kept = all.filter((r) => {
+      if (r.status !== "ativa") return true;
+      if (!valid.has(r.pedido_id) || closed.has(r.pedido_id)) return false;
+      return true;
+    });
+    const removed = all.length - kept.length;
+    if (removed > 0) writeLocalReservasAll(kept);
+    return removed;
+  }
+
+  const { data: reservas, error: resErr } = await supabase
+    .from("reservas_semana")
+    .select("id, pedido_id")
+    .eq("status", "ativa");
+
+  if (resErr) {
+    if (!isMissingTableError(resErr.code, resErr.message)) {
+      console.warn("[agenda] repairOrphanReservas:", resErr.message);
+    }
+    return 0;
+  }
+  if (!reservas?.length) return 0;
+
+  const pedidoIds = [...new Set(reservas.map((r) => r.pedido_id as string))];
+  const { data: pedidos, error: pedErr } = await supabase
+    .from("pedidos_cliente")
+    .select("id, status")
+    .in("id", pedidoIds);
+
+  if (pedErr) {
+    console.warn("[agenda] repairOrphanReservas pedidos:", pedErr.message);
+    return 0;
+  }
+
+  const statusByPedido = new Map(
+    (pedidos ?? []).map((p) => [p.id as string, p.status as string]),
+  );
+
+  const orphanIds = reservas
+    .filter((r) => {
+      const status = statusByPedido.get(r.pedido_id as string);
+      return !status || status === "Finalizado" || status === "Arquivado";
+    })
+    .map((r) => r.id as string);
+
+  if (orphanIds.length === 0) return 0;
+
+  const { error: delErr } = await supabase
+    .from("reservas_semana")
+    .delete()
+    .in("id", orphanIds);
+
+  if (delErr) {
+    console.warn("[agenda] repairOrphanReservas delete:", delErr.message);
+    return 0;
+  }
+
+  return orphanIds.length;
+}
+
 /** Corrige slots legados marcados agendado no template (pré-reservas_semana). */
 export async function repairLegacyAgendadoSlots(): Promise<void> {
   const { error } = await supabase

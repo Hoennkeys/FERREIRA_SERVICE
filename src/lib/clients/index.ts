@@ -30,6 +30,7 @@ export type { ClientsStore } from "./store";
 export type {
   ApproveResult,
   FinalizeResult,
+  RemoveClosedResult,
   CreateOrderInput,
   CreateOrderResult,
 } from "./types";
@@ -37,6 +38,7 @@ export * from "./types";
 export {
   CLOSED_CLIENT_RETENTION_DAYS,
   filterVisibleClients,
+  isClosedStatus,
   isExpiredClosedClient,
 } from "./retention";
 export { probePedidosBackend, usesCloudPedidos, type PedidosBackendStatus } from "./backend";
