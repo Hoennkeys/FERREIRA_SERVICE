@@ -29,6 +29,7 @@ Referências: [`supabase/setup.sql`](../supabase/setup.sql), [`supabase/migratio
 
 - [ ] **Authentication → Providers → Email**: desabilitar registro público (sign-up). Criar usuários admin manualmente ou por convite.
 - [ ] **SQL Editor**: executar [`supabase/migrations/security_phase1_rls.sql`](../supabase/migrations/security_phase1_rls.sql) no projeto de produção.
+- [ ] **SQL Editor**: executar [`supabase/migrations/security_phase1_fix_reservas_insert.sql`](../supabase/migrations/security_phase1_fix_reservas_insert.sql) (corrige insert em `reservas_semana` após Fase 1).
 - [ ] **Admin allowlist**: inserir o e-mail do operador (veja seção abaixo).
 - [ ] Confirmar que a conta de login do painel usa exatamente o mesmo e-mail cadastrado na allowlist.
 

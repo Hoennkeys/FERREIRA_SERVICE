@@ -7,9 +7,7 @@ export type PedidosBackendStatus =
   | { status: "setup"; message: string }
   | { status: "error"; message: string };
 
-const TABLE = "pedidos_cliente";
-
-/** Verifica se pedidos da homepage vão persistir no Supabase (visíveis no painel). */
+/** Verifica se o backend de pedidos (RPC + RLS Fase 1) está disponível. */
 export async function probePedidosBackend(): Promise<PedidosBackendStatus> {
   if (!isSupabaseConfigured()) {
     return {
@@ -19,23 +17,34 @@ export async function probePedidosBackend(): Promise<PedidosBackendStatus> {
     };
   }
 
-  const { error } = await supabase.from(TABLE).select("id").limit(1);
+  const nilUuid = "00000000-0000-0000-0000-000000000000";
 
-  if (!error) {
+  const { error: reservaProbeError } = await supabase.rpc(
+    "pedido_allows_homepage_reserva",
+    { p_pedido_id: nilUuid },
+  );
+
+  if (!reservaProbeError) {
     return { status: "ready" };
   }
 
-  if (isMissingTableError(error.code, error.message)) {
+  const msg = reservaProbeError.message ?? "";
+  const fnMissing =
+    reservaProbeError.code === "PGRST202" ||
+    msg.includes("Could not find the function") ||
+    msg.includes("pedido_allows_homepage_reserva");
+
+  if (fnMissing || isMissingTableError(reservaProbeError.code, msg)) {
     return {
       status: "setup",
       message:
-        'Tabela "pedidos_cliente" ausente. Execute supabase/setup.sql no dashboard do Supabase.',
+        "Execute supabase/migrations/security_phase1_fix_reservas_insert.sql (e security_phase1_rls.sql se ainda não rodou) no Supabase.",
     };
   }
 
   return {
     status: "error",
-    message: error.message || "Erro ao conectar com o banco de pedidos.",
+    message: msg || "Erro ao conectar com o banco de pedidos.",
   };
 }
 

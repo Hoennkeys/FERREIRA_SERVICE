@@ -135,17 +135,28 @@ create policy "pedidos_delete_admin"
   on pedidos_cliente for delete to authenticated
   using (public.is_admin());
 
+create or replace function public.pedido_allows_homepage_reserva(p_pedido_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.pedidos_cliente
+    where id = p_pedido_id and status = 'Pendente' and origem = 'homepage'
+  );
+$$;
+
+revoke all on function public.pedido_allows_homepage_reserva(uuid) from public;
+grant execute on function public.pedido_allows_homepage_reserva(uuid) to anon, authenticated;
+
 create policy "reservas_select_public"
   on reservas_semana for select using (true);
 
 create policy "reservas_insert_homepage"
   on reservas_semana for insert to anon, authenticated
-  with check (
-    exists (
-      select 1 from pedidos_cliente p
-      where p.id = pedido_id and p.status = 'Pendente' and p.origem = 'homepage'
-    )
-  );
+  with check (public.pedido_allows_homepage_reserva(pedido_id));
 
 create policy "reservas_update_admin"
   on reservas_semana for update to authenticated
