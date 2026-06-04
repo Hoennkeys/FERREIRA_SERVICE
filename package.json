@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "db:setup": "node scripts/apply-supabase-setup.mjs",
-    "twitch:check": "node scripts/check-twitch-live.mjs"
+    "twitch:check": "node scripts/check-twitch-live.mjs",
+    "test:security": "node --experimental-strip-types --test src/lib/safe-redirect.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

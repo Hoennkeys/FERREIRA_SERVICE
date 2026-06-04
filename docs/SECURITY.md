@@ -67,20 +67,28 @@ Com sessão do operador em `/dispatch`:
 
 ### Headers HTTP (Vercel)
 
-- [ ] Adicionar em `vercel.json`: `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
-- [ ] Content-Security-Policy (começar em report-only se necessário; ajustar domínios Twitch/Supabase).
+- [x] Adicionar em `vercel.json`: `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- [x] Content-Security-Policy em **report-only** (ajustar domínios antes de enforce).
 
 ### Aplicação
 
-- [ ] Rate limit ou CAPTCHA (Cloudflare Turnstile) no submit do [`OnboardingModal`](../src/components/landing/OnboardingModal.tsx).
-- [ ] Validar `redirect` no login: apenas paths internos (`/dispatch`, etc.) — [`login.tsx`](../src/routes/login.tsx).
-- [ ] Proteger [`processTelemetry`](../src/lib/api/telemetry.functions.ts) e [`checkTwitchLive`](../src/lib/api/twitch.functions.ts) (auth admin ou rate limit + cache).
-- [ ] MFA na conta admin (Supabase Authentication).
+- [x] Rate limit + Turnstile (opcional) + honeypot no [`OnboardingModal`](../src/components/landing/OnboardingModal.tsx).
+- [x] Validar `redirect` no login — [`safe-redirect.ts`](../src/lib/safe-redirect.ts) + testes `npm run test:security`.
+- [x] Proteger server functions (rate limit, cache Twitch, CSRF em [`start.ts`](../src/start.ts)).
+- [x] Painel `/dispatch`: [`requireAdmin`](../src/lib/auth.ts) + `check_is_admin` RPC.
+- [ ] **Manual:** MFA na conta admin (Supabase → Authentication → Users → enable MFA).
+
+### SQL — executar em produção
+
+- [ ] [`security_phase2_hardening.sql`](../supabase/migrations/security_phase2_hardening.sql) — rate limit na RPC `create_pedido_homepage`, RLS `live_service_session` / `dispatch_queue`, `check_is_admin`.
 
 ### Dados / secrets
 
 - [ ] Revisar se chave PIX no client pode ir para config server (opcional).
 - [ ] Confirmar `.env` fora do git; rotacionar keys se já vazaram.
+- [ ] **Opcional:** Turnstile (`VITE_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`) — reforço anti-bot; sem keys, rate limit + honeypot + limite no DB continuam ativos.
+
+Relatório detalhado: [`SECURITY_PHASE2_REPORT.md`](SECURITY_PHASE2_REPORT.md).
 
 ---
 
@@ -98,8 +106,8 @@ Com sessão do operador em `/dispatch`:
 ## Melhorias futuras (fora das fases acima)
 
 - [ ] RPC transacional único: criar pedido + reservas em uma transação.
-- [ ] Tabelas `live_service_session` / `dispatch_queue`: aplicar `is_admin()` nas policies documentadas nos stores.
-- [ ] Edge Function com rate limit por IP para `create_pedido_homepage`.
+- [ ] Edge Function com rate limit por IP (reforço além do limite por WhatsApp no Postgres).
+- [ ] CSP **enforce** (hoje report-only em `vercel.json`).
 
 ---
 

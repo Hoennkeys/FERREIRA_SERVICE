@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_DISPATCH_QUEUE_BACKEND?: "mock" | "supabase";
   /** Host extra para parent do player Twitch (ex.: dominio customizado). */
   readonly VITE_TWITCH_PARENT_HOST?: string;
+  /** Cloudflare Turnstile — site key (público). */
+  readonly VITE_TURNSTILE_SITE_KEY?: string;
 }
 
 interface ImportMeta {

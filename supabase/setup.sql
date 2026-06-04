@@ -166,6 +166,46 @@ create policy "reservas_delete_admin"
   on reservas_semana for delete to authenticated
   using (public.is_admin());
 
+-- Rate limit homepage (Fase 2) — ver security_phase2_hardening.sql para RLS sessão/fila
+create table if not exists public.homepage_rate_events (
+  id uuid primary key default gen_random_uuid(),
+  whatsapp_hash text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.homepage_rate_events enable row level security;
+drop policy if exists "homepage_rate_events_no_api" on public.homepage_rate_events;
+create policy "homepage_rate_events_no_api"
+  on public.homepage_rate_events for all using (false) with check (false);
+
+create or replace function public._whatsapp_digits(p_whatsapp text)
+returns text language sql immutable as $$
+  select nullif(regexp_replace(coalesce(p_whatsapp, ''), '\D', '', 'g'), '');
+$$;
+
+create or replace function public.assert_homepage_pedido_rate(p_whatsapp text)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_digits text; v_hash text; v_per_whatsapp_1h int; v_global_1h int; v_pending int;
+begin
+  v_digits := public._whatsapp_digits(p_whatsapp);
+  if v_digits is null or length(v_digits) < 10 then raise exception 'invalid_whatsapp'; end if;
+  v_hash := md5(v_digits);
+  select count(*)::int into v_per_whatsapp_1h from public.homepage_rate_events
+    where whatsapp_hash = v_hash and created_at > now() - interval '1 hour';
+  if v_per_whatsapp_1h >= 3 then raise exception 'rate_limit_whatsapp'; end if;
+  select count(*)::int into v_global_1h from public.homepage_rate_events
+    where created_at > now() - interval '1 hour';
+  if v_global_1h >= 40 then raise exception 'rate_limit_global'; end if;
+  select count(*)::int into v_pending from public.pedidos_cliente
+    where origem = 'homepage' and status = 'Pendente'
+      and public._whatsapp_digits(whatsapp) = v_digits;
+  if v_pending >= 2 then raise exception 'pending_limit_whatsapp'; end if;
+  insert into public.homepage_rate_events (whatsapp_hash) values (v_hash);
+end;
+$$;
+revoke all on function public.assert_homepage_pedido_rate(text) from public;
+grant execute on function public.assert_homepage_pedido_rate(text) to anon, authenticated;
+
 create or replace function public.create_pedido_homepage(
   p_nome text, p_whatsapp text, p_discord text, p_char_nome text,
   p_char_level int, p_char_servidor text, p_pacote_id text, p_pacote_nome text,
@@ -182,6 +222,7 @@ begin
      or p_char_level is null or p_char_level < 1 then
     raise exception 'invalid_pedido_payload';
   end if;
+  perform public.assert_homepage_pedido_rate(p_whatsapp);
   v_token := gen_random_uuid();
   insert into pedidos_cliente (
     nome, whatsapp, discord, char_nome, char_level, char_servidor,
@@ -221,6 +262,12 @@ revoke all on function public.create_pedido_homepage from public;
 revoke all on function public.rollback_pedido_homepage from public;
 grant execute on function public.create_pedido_homepage to anon, authenticated;
 grant execute on function public.rollback_pedido_homepage to anon, authenticated;
+
+create or replace function public.check_is_admin()
+returns boolean language sql stable security definer set search_path = public
+as $$ select public.is_admin(); $$;
+revoke all on function public.check_is_admin() from public;
+grant execute on function public.check_is_admin() to authenticated;
 
 insert into public.admin_allowlist (email)
 values ('hoennkeys@gmail.com')
