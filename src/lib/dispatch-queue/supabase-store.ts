@@ -31,13 +31,14 @@ import {
  *
  *   alter table public.dispatch_queue enable row level security;
  *
- *   create policy "authenticated can read queue"
+ *   create policy "dispatch_queue_select_admin"
  *     on public.dispatch_queue for select
- *     to authenticated using (true);
+ *     to authenticated using (public.is_admin());
  *
- *   create policy "authenticated can update queue"
+ *   create policy "dispatch_queue_update_admin"
  *     on public.dispatch_queue for update
- *     to authenticated using (true) with check (true);
+ *     to authenticated using (public.is_admin()) with check (public.is_admin());
+ *   -- Após Fase 1: execute supabase/migrations/security_phase2_hardening.sql
  *
  *   alter publication supabase_realtime add table public.dispatch_queue;
  */

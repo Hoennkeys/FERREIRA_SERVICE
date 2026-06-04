@@ -127,44 +127,63 @@ class SupabaseClientsStore implements ClientsStore {
   }
 
   async createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
-    const { data, error } = await supabase
-      .from(TABLE)
-      .insert({
-        nome: input.nome,
-        whatsapp: input.whatsapp,
-        discord: input.discord ?? null,
-        char_nome: input.charNome,
-        char_level: input.charLevel,
-        char_servidor: input.charServidor,
-        pacote_id: input.pacoteId,
-        pacote_nome: input.pacoteNome,
-        pacote_horas: input.pacoteHoras,
-        pacote_preco: input.pacotePreco,
-        agenda_dias: input.agendaDias,
-        agenda_horarios: input.agendaHorarios,
-        slot_ids: input.slotIds,
-        semana_inicio: input.semanaInicio,
-        status: "Pendente",
-        origem: "homepage",
-      })
-      .select("id")
-      .single();
+    const { data, error } = await supabase.rpc("create_pedido_homepage", {
+      p_nome: input.nome,
+      p_whatsapp: input.whatsapp,
+      p_discord: input.discord ?? null,
+      p_char_nome: input.charNome,
+      p_char_level: input.charLevel,
+      p_char_servidor: input.charServidor,
+      p_pacote_id: input.pacoteId,
+      p_pacote_nome: input.pacoteNome,
+      p_pacote_horas: input.pacoteHoras,
+      p_pacote_preco: input.pacotePreco,
+      p_agenda_dias: input.agendaDias,
+      p_agenda_horarios: input.agendaHorarios,
+      p_slot_ids: input.slotIds,
+      p_semana_inicio: input.semanaInicio,
+    });
 
-    if (error || !data) {
+    const row = Array.isArray(data) ? data[0] : data;
+    const id = row?.id as string | undefined;
+    const claimToken = row?.claim_token as string | undefined;
+
+    if (error || !id || !claimToken) {
       console.warn("[clients] createOrder error:", error?.code, error?.message);
+      const msg = error?.message ?? "";
+      if (
+        msg.includes("rate_limit") ||
+        msg.includes("pending_limit") ||
+        msg.includes("invalid_whatsapp")
+      ) {
+        return { ok: false, reason: "rate_limit" };
+      }
       if (isMissingTableError(error?.code, error?.message)) {
         return { ok: false, reason: "setup" };
       }
       return { ok: false, reason: "unknown" };
     }
 
-    await this.fetchAll();
-    return { ok: true, id: data.id as string };
+    return { ok: true, id, claimToken };
   }
 
-  async deleteOrder(id: string): Promise<void> {
+  async deleteOrder(id: string, options?: { claimToken?: string }): Promise<void> {
+    if (options?.claimToken) {
+      const { error } = await supabase.rpc("rollback_pedido_homepage", {
+        p_id: id,
+        p_claim_token: options.claimToken,
+      });
+      if (error) {
+        console.warn("[clients] rollback_pedido_homepage error:", error.message);
+      }
+      return;
+    }
+
     await rollbackReservasForPedido(id);
-    await supabase.from(TABLE).delete().eq("id", id);
+    const { error } = await supabase.from(TABLE).delete().eq("id", id);
+    if (error) {
+      console.warn("[clients] deleteOrder error:", error.message);
+    }
     await this.fetchAll();
   }
 

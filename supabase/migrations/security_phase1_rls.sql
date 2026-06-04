@@ -1,0 +1,262 @@
+-- =============================================================
+-- SECURITY PHASE 1 — RLS, admin allowlist, homepage RPCs
+-- Execute no SQL Editor do Supabase (produção e staging).
+-- Admin seed: hoennkeys@gmail.com (ver docs/SECURITY.md).
+-- =============================================================
+
+-- ── 1. Admin allowlist ─────────────────────────────────────────
+
+create table if not exists public.admin_allowlist (
+  email text primary key
+);
+
+alter table public.admin_allowlist enable row level security;
+
+-- Ninguém manipula a allowlist via API; só service role / SQL Editor.
+drop policy if exists "admin_allowlist_no_api" on public.admin_allowlist;
+create policy "admin_allowlist_no_api"
+  on public.admin_allowlist
+  for all
+  using (false)
+  with check (false);
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.admin_allowlist
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+
+-- ── 2. claim_token em pedidos_cliente ────────────────────────
+
+alter table public.pedidos_cliente
+  add column if not exists claim_token uuid not null default gen_random_uuid();
+
+-- ── 3. Remover policies antigas (permissivas) ──────────────────
+
+drop policy if exists "pedidos_insert_public" on public.pedidos_cliente;
+drop policy if exists "pedidos_select_public" on public.pedidos_cliente;
+drop policy if exists "pedidos_update_admin" on public.pedidos_cliente;
+drop policy if exists "pedidos_delete_public" on public.pedidos_cliente;
+
+drop policy if exists "reservas_select_public" on public.reservas_semana;
+drop policy if exists "reservas_insert_public" on public.reservas_semana;
+drop policy if exists "reservas_update_admin" on public.reservas_semana;
+drop policy if exists "reservas_delete_public" on public.reservas_semana;
+
+drop policy if exists "agenda_update_admin" on public.disponibilidade_agenda;
+
+-- ── 4. Policies novas — pedidos_cliente ────────────────────────
+
+create policy "pedidos_select_admin"
+  on public.pedidos_cliente for select
+  to authenticated
+  using (public.is_admin());
+
+create policy "pedidos_update_admin"
+  on public.pedidos_cliente for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create policy "pedidos_delete_admin"
+  on public.pedidos_cliente for delete
+  to authenticated
+  using (public.is_admin());
+
+-- ── 5. Helper: checar pedido para reserva (anon não pode SELECT pedidos) ─
+
+create or replace function public.pedido_allows_homepage_reserva(p_pedido_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.pedidos_cliente
+    where id = p_pedido_id
+      and status = 'Pendente'
+      and origem = 'homepage'
+  );
+$$;
+
+revoke all on function public.pedido_allows_homepage_reserva(uuid) from public;
+grant execute on function public.pedido_allows_homepage_reserva(uuid) to anon, authenticated;
+
+-- ── 6. Policies novas — reservas_semana ────────────────────────
+
+create policy "reservas_select_public"
+  on public.reservas_semana for select
+  using (true);
+
+create policy "reservas_insert_homepage"
+  on public.reservas_semana for insert
+  to anon, authenticated
+  with check (public.pedido_allows_homepage_reserva(pedido_id));
+
+create policy "reservas_update_admin"
+  on public.reservas_semana for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create policy "reservas_delete_admin"
+  on public.reservas_semana for delete
+  to authenticated
+  using (public.is_admin());
+
+-- ── 7. Policies — disponibilidade_agenda ───────────────────────
+
+drop policy if exists "agenda_select_public" on public.disponibilidade_agenda;
+create policy "agenda_select_public"
+  on public.disponibilidade_agenda for select
+  using (true);
+
+create policy "agenda_update_admin"
+  on public.disponibilidade_agenda for update
+  to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- Manter reserva anônima no template (legado): disponivel → agendado
+drop policy if exists "agenda_book_anon" on public.disponibilidade_agenda;
+create policy "agenda_book_anon"
+  on public.disponibilidade_agenda for update
+  to anon
+  using (status = 'disponivel')
+  with check (status = 'agendado');
+
+-- ── 8. RPC: criar pedido na homepage ─────────────────────────
+
+create or replace function public.create_pedido_homepage(
+  p_nome text,
+  p_whatsapp text,
+  p_discord text,
+  p_char_nome text,
+  p_char_level int,
+  p_char_servidor text,
+  p_pacote_id text,
+  p_pacote_nome text,
+  p_pacote_horas text,
+  p_pacote_preco text,
+  p_agenda_dias text[],
+  p_agenda_horarios text[],
+  p_slot_ids uuid[],
+  p_semana_inicio date
+)
+returns table (id uuid, claim_token uuid)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_token uuid;
+begin
+  if coalesce(trim(p_nome), '') = ''
+     or coalesce(trim(p_whatsapp), '') = ''
+     or coalesce(trim(p_char_nome), '') = ''
+     or coalesce(trim(p_char_servidor), '') = ''
+     or p_char_level is null
+     or p_char_level < 1 then
+    raise exception 'invalid_pedido_payload';
+  end if;
+
+  v_token := gen_random_uuid();
+
+  insert into public.pedidos_cliente (
+    nome,
+    whatsapp,
+    discord,
+    char_nome,
+    char_level,
+    char_servidor,
+    pacote_id,
+    pacote_nome,
+    pacote_horas,
+    pacote_preco,
+    agenda_dias,
+    agenda_horarios,
+    slot_ids,
+    semana_inicio,
+    status,
+    origem,
+    claim_token
+  ) values (
+    trim(p_nome),
+    trim(p_whatsapp),
+    nullif(trim(coalesce(p_discord, '')), ''),
+    trim(p_char_nome),
+    p_char_level,
+    trim(p_char_servidor),
+    p_pacote_id,
+    p_pacote_nome,
+    p_pacote_horas,
+    p_pacote_preco,
+    coalesce(p_agenda_dias, '{}'),
+    coalesce(p_agenda_horarios, '{}'),
+    coalesce(p_slot_ids, '{}'),
+    p_semana_inicio,
+    'Pendente',
+    'homepage',
+    v_token
+  )
+  returning pedidos_cliente.id, pedidos_cliente.claim_token
+  into v_id, v_token;
+
+  return query select v_id, v_token;
+end;
+$$;
+
+-- ── 9. RPC: rollback pedido homepage (reservas + pedido) ───────
+
+create or replace function public.rollback_pedido_homepage(
+  p_id uuid,
+  p_claim_token uuid
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_deleted int;
+begin
+  if p_id is null or p_claim_token is null then
+    return false;
+  end if;
+
+  delete from public.reservas_semana
+  where pedido_id = p_id;
+
+  delete from public.pedidos_cliente
+  where id = p_id
+    and claim_token = p_claim_token
+    and origem = 'homepage'
+    and status = 'Pendente';
+
+  get diagnostics v_deleted = row_count;
+  return v_deleted > 0;
+end;
+$$;
+
+revoke all on function public.create_pedido_homepage from public;
+revoke all on function public.rollback_pedido_homepage from public;
+
+grant execute on function public.create_pedido_homepage to anon, authenticated;
+grant execute on function public.rollback_pedido_homepage to anon, authenticated;
+
+-- ── 10. Seed admin ─────────────────────────────────────────────
+
+insert into public.admin_allowlist (email)
+values ('hoennkeys@gmail.com')
+on conflict (email) do nothing;

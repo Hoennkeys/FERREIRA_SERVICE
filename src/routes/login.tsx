@@ -5,10 +5,17 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getActiveSession } from "@/lib/auth";
+import {
+  DEFAULT_AUTH_REDIRECT,
+  sanitizeRedirectPath,
+} from "@/lib/safe-redirect";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const loginSearchSchema = z.object({
-  redirect: z.string().optional(),
+  redirect: z
+    .string()
+    .optional()
+    .transform((value) => sanitizeRedirectPath(value)),
 });
 
 export const Route = createFileRoute("/login")({
@@ -37,7 +44,7 @@ function LoginPage() {
     getActiveSession().then((session) => {
       if (!mounted) return;
       if (session) {
-        navigate({ to: redirectTo ?? "/dispatch", replace: true });
+        navigate({ to: redirectTo ?? DEFAULT_AUTH_REDIRECT, replace: true });
       } else {
         setCheckingSession(false);
       }
@@ -65,7 +72,7 @@ function LoginPage() {
       return;
     }
 
-    navigate({ to: redirectTo ?? "/dispatch", replace: true });
+    navigate({ to: redirectTo ?? DEFAULT_AUTH_REDIRECT, replace: true });
   }
 
   if (checkingSession) {

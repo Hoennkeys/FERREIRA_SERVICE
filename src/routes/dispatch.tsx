@@ -3,11 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PanelLayout } from "@/components/panel/PanelLayout";
 import { AuthPending } from "@/components/auth/AuthPending";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { requireAuth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 
 export const Route = createFileRoute("/dispatch")({
   beforeLoad: async ({ location }) => {
-    await requireAuth({ redirectTo: location.pathname });
+    await requireAdmin({ redirectTo: location.pathname });
   },
   pendingComponent: AuthPending,
   head: () => ({
