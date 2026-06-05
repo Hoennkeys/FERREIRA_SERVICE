@@ -30,6 +30,7 @@ Referências: [`supabase/setup.sql`](../supabase/setup.sql), [`supabase/migratio
 - [ ] **Authentication → Providers → Email**: desabilitar registro público (sign-up). Criar usuários admin manualmente ou por convite.
 - [ ] **SQL Editor**: executar [`supabase/migrations/security_phase1_rls.sql`](../supabase/migrations/security_phase1_rls.sql) no projeto de produção.
 - [ ] **SQL Editor**: executar [`supabase/migrations/security_phase1_fix_reservas_insert.sql`](../supabase/migrations/security_phase1_fix_reservas_insert.sql) (corrige insert em `reservas_semana` após Fase 1).
+- [ ] **SQL Editor**: executar [`supabase/migrations/security_phase1_fix_rollback_and_rate.sql`](../supabase/migrations/security_phase1_fix_rollback_and_rate.sql) (corrige griefing no rollback + bloqueia RPC direta de rate limit).
 - [ ] **Admin allowlist**: inserir o e-mail do operador (veja seção abaixo).
 - [ ] Confirmar que a conta de login do painel usa exatamente o mesmo e-mail cadastrado na allowlist.
 
@@ -76,6 +77,7 @@ Com sessão do operador em `/dispatch`:
 - [x] Validar `redirect` no login — [`safe-redirect.ts`](../src/lib/safe-redirect.ts) + testes `npm run test:security`.
 - [x] Proteger server functions (rate limit, cache Twitch, CSRF em [`start.ts`](../src/start.ts)).
 - [x] Painel `/dispatch`: [`requireAdmin`](../src/lib/auth.ts) + `check_is_admin` RPC.
+- [x] Login: checagem admin antes de redirecionar sessão existente — [`login.tsx`](../src/routes/login.tsx).
 - [ ] **Manual:** MFA na conta admin (Supabase → Authentication → Users → enable MFA).
 
 ### SQL — executar em produção
@@ -94,12 +96,59 @@ Relatório detalhado: [`SECURITY_PHASE2_REPORT.md`](SECURITY_PHASE2_REPORT.md).
 
 ## Fase 3 — Contínuo
 
-- [ ] `npm audit` / Dependabot em dependências críticas.
-- [ ] Monitorar picos de `insert` em `pedidos_cliente` (spam).
-- [ ] Política de privacidade + base legal LGPD (WhatsApp, Discord, retenção 5 dias).
-- [ ] Revisão trimestral de RLS e novas migrations.
-- [ ] OWASP ZAP baseline no deploy de produção.
-- [ ] Plano de incidente: rotacionar anon/service keys, desabilitar RPC público temporariamente se abuso.
+### Código (repositório)
+
+- [x] `npm audit` / Dependabot — [`.github/dependabot.yml`](../.github/dependabot.yml), [`.github/workflows/security.yml`](../.github/workflows/security.yml), script `npm run audit:ci`
+- [x] Monitoramento documentado — [`MONITORING.md`](MONITORING.md); view/RPC [`security_phase3_monitoring.sql`](../supabase/migrations/security_phase3_monitoring.sql)
+- [x] Política de privacidade LGPD — rota [`/privacidade`](../src/routes/privacidade.tsx), link no [`Footer`](../src/components/landing/Footer.tsx)
+- [x] Revisão trimestral — template [`SECURITY_QUARTERLY_REVIEW.md`](SECURITY_QUARTERLY_REVIEW.md)
+- [x] OWASP ZAP baseline semanal — workflow `security.yml` (segunda 06:00 UTC) contra produção; regras em [`.zap/rules.tsv`](../.zap/rules.tsv)
+- [x] Plano de incidente — [`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md)
+
+### Manual — produção / operação
+
+- [ ] Executar [`security_phase3_monitoring.sql`](../supabase/migrations/security_phase3_monitoring.sql) no SQL Editor
+- [ ] Configurar pg_cron para `prune_homepage_rate_events` e `purge_expired_pedidos_cliente` (ver [`MONITORING.md`](MONITORING.md))
+- [ ] Primeira revisão trimestral preenchida em [`SECURITY_QUARTERLY_REVIEW.md`](SECURITY_QUARTERLY_REVIEW.md)
+- [ ] Revisar relatório ZAP semanal (GitHub Actions → artefato `zap-report`); endurecer workflow quando estável (remover `continue-on-error`)
+
+### Adicionais (Fase 3)
+
+- [x] Admin check no login — [`login.tsx`](../src/routes/login.tsx) + `signOutAndClearSession()` anti-loop
+- [x] CSP `decapi.me` em `connect-src` — [`vercel.json`](../vercel.json) (Twitch uptime em [`use-twitch-status.ts`](../src/hooks/use-twitch-status.ts))
+- [x] Logging sem PII — [`safe-log.ts`](../src/lib/safe-log.ts) em SSR/error boundaries
+- [ ] **Manual:** Supabase Auth hardening no Dashboard (ver seção abaixo)
+
+### Verificação de secrets
+
+Confirmar que segredos **nunca** usam prefixo `VITE_`:
+
+```bash
+rg "VITE_.*SECRET|VITE_.*SERVICE_ROLE|service_role" --glob "!node_modules"
+```
+
+Esperado: apenas `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (públicos por design), `VITE_TURNSTILE_SITE_KEY` (site key pública). `TWITCH_CLIENT_SECRET`, `TURNSTILE_SECRET_KEY` e `service_role` ficam só no servidor/Vercel.
+
+- [ ] Rodar grep acima; rotacionar chaves se algo sensível aparecer no histórico git
+
+### Supabase Auth hardening (Dashboard — manual)
+
+- [ ] **Leaked password protection** — Authentication → Settings
+- [ ] **Rate limit / captcha no login** — anti brute-force em `/login`
+- [ ] **E-mails de alteração de senha** — exigir confirmação por e-mail
+- [ ] **MFA TOTP** na conta admin (também item Fase 2)
+
+### OWASP ZAP — interpretação
+
+- **High/Critical novos:** investigar em [`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md); ajustar [`.zap/rules.tsv`](../.zap/rules.tsv) só para falsos positivos confirmados
+- **Medium:** priorizar na revisão trimestral
+- CSP report-only ainda não bloqueia — violações aparecem no console do browser, não no ZAP
+
+### Logging (produção)
+
+Não logar senhas, tokens completos, WhatsApp, Discord nem payloads de pedidos. Usar [`safeError`](../src/lib/safe-log.ts) ou `error.message` com prefixo de contexto. Detalhes em [`MONITORING.md`](MONITORING.md).
+
+Relatório Fase 3 + refinamentos: [`SECURITY_PHASE3_REFINEMENTS_REPORT.md`](SECURITY_PHASE3_REFINEMENTS_REPORT.md).
 
 ---
 

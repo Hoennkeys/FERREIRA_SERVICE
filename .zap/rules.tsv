@@ -1,0 +1,3 @@
+10038	IGNORE	(Vercel sets HSTS at edge; ZAP may not see it on all paths)
+10035	IGNORE	(CSP is report-only during Phase 2 — enforce planned separately)
+10020	IGNORE	(X-Frame-Options set by Vercel edge headers)

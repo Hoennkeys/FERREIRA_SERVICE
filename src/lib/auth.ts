@@ -9,6 +9,18 @@ export async function getActiveSession(): Promise<Session | null> {
   return data.session;
 }
 
+/**
+ * Encerra a sessão Supabase e confirma limpeza local antes de exibir UI pós-logout.
+ * Evita race onde getSession() ainda retorna JWT logo após signOut.
+ */
+export async function signOutAndClearSession(): Promise<void> {
+  await supabase.auth.signOut();
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    await supabase.auth.signOut();
+  }
+}
+
 export async function isCurrentUserAdmin(): Promise<boolean> {
   const { data, error } = await supabase.rpc("check_is_admin");
   if (error) {
@@ -47,7 +59,7 @@ export async function requireAdmin({
 
   const admin = await isCurrentUserAdmin();
   if (!admin) {
-    await supabase.auth.signOut();
+    await signOutAndClearSession();
     throw redirect({
       to: "/login",
       search: { redirect: safeRedirect },
