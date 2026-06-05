@@ -1,6 +1,14 @@
-import type { LiveSessionStore, SessionListener, StartSessionInput } from "./store";
+import type {
+  LiveSessionStore,
+  SessionListener,
+  StartSessionInput,
+} from "./store";
 import { getElapsedSeconds } from "./utils";
-import { INACTIVE_SESSION, parseSession, type LiveServiceSession } from "./types";
+import {
+  INACTIVE_SESSION,
+  parseSession,
+  type LiveServiceSession,
+} from "./types";
 
 const STORAGE_KEY = "ferreira-live-session";
 const CHANNEL_NAME = "ferreira-live-session";

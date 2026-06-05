@@ -1,8 +1,4 @@
-import type {
-  AddGroupInput,
-  DispatchQueueStore,
-  QueueListener,
-} from "./store";
+import type { AddGroupInput, DispatchQueueStore, QueueListener } from "./store";
 import { applyClick, expireCooldown, normalizeOrder } from "./logic";
 import {
   EMPTY_QUEUE,

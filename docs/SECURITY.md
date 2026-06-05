@@ -162,13 +162,13 @@ Relatório Fase 3 + refinamentos: [`SECURITY_PHASE3_REFINEMENTS_REPORT.md`](SECU
 
 ## Estado atual da Fase 1
 
-| Recurso | Anon | Admin (`is_admin`) |
-|---------|------|---------------------|
-| `pedidos_cliente` SELECT | Negado | Permitido |
-| `pedidos_cliente` INSERT direto | Negado | — |
-| `pedidos_cliente` via RPC homepage | `create_pedido_homepage` | — |
-| `pedidos_cliente` rollback homepage | `rollback_pedido_homepage` + token | — |
-| `reservas_semana` SELECT | Permitido (grade) | Permitido |
-| `reservas_semana` INSERT | Só pedido Pendente homepage | — |
-| `reservas_semana` DELETE | Negado (RPC rollback) | Permitido |
-| `disponibilidade_agenda` UPDATE admin | Negado | `is_admin()` |
+| Recurso                               | Anon                               | Admin (`is_admin`) |
+| ------------------------------------- | ---------------------------------- | ------------------ |
+| `pedidos_cliente` SELECT              | Negado                             | Permitido          |
+| `pedidos_cliente` INSERT direto       | Negado                             | —                  |
+| `pedidos_cliente` via RPC homepage    | `create_pedido_homepage`           | —                  |
+| `pedidos_cliente` rollback homepage   | `rollback_pedido_homepage` + token | —                  |
+| `reservas_semana` SELECT              | Permitido (grade)                  | Permitido          |
+| `reservas_semana` INSERT              | Só pedido Pendente homepage        | —                  |
+| `reservas_semana` DELETE              | Negado (RPC rollback)              | Permitido          |
+| `disponibilidade_agenda` UPDATE admin | Negado                             | `is_admin()`       |

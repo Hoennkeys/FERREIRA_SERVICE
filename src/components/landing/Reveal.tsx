@@ -49,7 +49,7 @@ export function Reveal({
     return () => io.disconnect();
   }, [delay]);
 
-  const Component = Tag as any;
+  const Component = Tag as ElementType;
   return (
     <Component ref={ref} data-reveal className={className}>
       {children}

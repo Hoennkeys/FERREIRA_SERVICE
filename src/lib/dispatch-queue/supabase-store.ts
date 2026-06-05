@@ -1,9 +1,5 @@
 import { supabase } from "../supabase";
-import type {
-  AddGroupInput,
-  DispatchQueueStore,
-  QueueListener,
-} from "./store";
+import type { AddGroupInput, DispatchQueueStore, QueueListener } from "./store";
 import { applyClick, expireCooldown, normalizeOrder } from "./logic";
 import {
   EMPTY_QUEUE,
@@ -155,7 +151,10 @@ class SupabaseDispatchQueueStore implements DispatchQueueStore {
   }
 
   async setCooldownMinutes(minutes: number): Promise<void> {
-    await this.upsert({ ...this.state, cooldown_minutes: clampMinutes(minutes) });
+    await this.upsert({
+      ...this.state,
+      cooldown_minutes: clampMinutes(minutes),
+    });
   }
 
   async cancelCooldown(): Promise<void> {

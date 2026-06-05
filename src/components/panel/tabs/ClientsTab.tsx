@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Check, CheckCircle2, MessageCircle, Trash2, Users, X } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  MessageCircle,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 
 import { formatWeekRange } from "@/lib/agenda";
 import {
@@ -144,19 +151,22 @@ export function ClientsTab() {
             Clientes & Contratos Ativos
           </h1>
           <p className="mt-1 text-[10px] text-white/35">
-            Encerrados ficam na lista abaixo até você remover ou até 5 dias (limpeza
-            automática).
+            Encerrados ficam na lista abaixo até você remover ou até 5 dias
+            (limpeza automática).
           </p>
         </div>
       </div>
 
       {backend && backend.status !== "ready" && (
         <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
-          <p className="font-semibold tracking-wide">PEDIDOS NÃO SINCRONIZAM COM O PAINEL</p>
+          <p className="font-semibold tracking-wide">
+            PEDIDOS NÃO SINCRONIZAM COM O PAINEL
+          </p>
           <p className="mt-1 text-amber-200/80">{backend.message}</p>
           {!usesCloudPedidos() && (
             <p className="mt-2 text-amber-200/70">
-              Modo local ativo: pedidos feitos no site ficam só no navegador do cliente.
+              Modo local ativo: pedidos feitos no site ficam só no navegador do
+              cliente.
             </p>
           )}
         </div>
@@ -187,8 +197,8 @@ export function ClientsTab() {
             </p>
             <p className="mt-2 text-[10px] text-white/25">
               Novos pedidos da homepage aparecem aqui como{" "}
-              <span className="text-amber-400/90">PENDENTE</span> — use Atualizar lista
-              após receber WhatsApp.
+              <span className="text-amber-400/90">PENDENTE</span> — use
+              Atualizar lista após receber WhatsApp.
             </p>
           </div>
         ) : (
@@ -243,7 +253,9 @@ export function ClientsTab() {
         )}
 
         {archived.length > 0 && (
-          <div className={active.length > 0 || finished.length > 0 ? "pt-4" : ""}>
+          <div
+            className={active.length > 0 || finished.length > 0 ? "pt-4" : ""}
+          >
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] tracking-[0.18em] text-white/30">
                 ARQUIVADOS / CANCELADOS ({archived.length})
@@ -403,7 +415,9 @@ function ClientCard({
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
-          <p className="text-[10px] tracking-[0.18em] text-white/40">DADOS PESSOAIS</p>
+          <p className="text-[10px] tracking-[0.18em] text-white/40">
+            DADOS PESSOAIS
+          </p>
           <ul className="mt-2 space-y-1.5 text-sm text-white/80">
             <li>
               WhatsApp:{" "}
@@ -419,17 +433,23 @@ function ClientCard({
             {client.contato.discord && (
               <li>
                 Discord:{" "}
-                <span className="font-mono text-white/60">{client.contato.discord}</span>
+                <span className="font-mono text-white/60">
+                  {client.contato.discord}
+                </span>
               </li>
             )}
           </ul>
         </div>
 
         <div>
-          <p className="text-[10px] tracking-[0.18em] text-white/40">CHARACTER</p>
+          <p className="text-[10px] tracking-[0.18em] text-white/40">
+            CHARACTER
+          </p>
           <ul className="mt-2 space-y-1.5 text-sm text-white/80">
             <li>
-              <span className="font-semibold text-white">{client.character.nome}</span>
+              <span className="font-semibold text-white">
+                {client.character.nome}
+              </span>
             </li>
             <li>Lv. {client.character.level}</li>
             <li className="text-white/50">{client.character.servidor}</li>

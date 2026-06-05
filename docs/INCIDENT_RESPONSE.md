@@ -8,13 +8,13 @@ Runbook operacional para abuso, vazamento ou comprometimento. Complementa [`SECU
 
 Sinais de alerta:
 
-| Sinal | Fonte |
-|-------|--------|
-| Pico de pedidos homepage (>20/h) | [`MONITORING.md`](MONITORING.md) — queries SQL |
-| Muitos `rate_limit_*` nos logs | Supabase Logs → API / Postgres |
-| ZAP baseline com alerta High/Critical | GitHub Actions → artefato `zap-report` |
-| Acesso não autorizado ao painel | Relato do operador ou sessão estranha |
-| Chave anon/service exposta no git | `grep` em histórico ou alerta Dependabot |
+| Sinal                                 | Fonte                                          |
+| ------------------------------------- | ---------------------------------------------- |
+| Pico de pedidos homepage (>20/h)      | [`MONITORING.md`](MONITORING.md) — queries SQL |
+| Muitos `rate_limit_*` nos logs        | Supabase Logs → API / Postgres                 |
+| ZAP baseline com alerta High/Critical | GitHub Actions → artefato `zap-report`         |
+| Acesso não autorizado ao painel       | Relato do operador ou sessão estranha          |
+| Chave anon/service exposta no git     | `grep` em histórico ou alerta Dependabot       |
 
 **Severidade**
 
@@ -134,9 +134,9 @@ Template (adaptar):
 
 ## Contatos rápidos
 
-| Recurso | Onde |
-|---------|------|
-| Supabase projeto | [Dashboard](https://supabase.com/dashboard) |
-| Vercel deploy | [Dashboard Vercel](https://vercel.com) |
-| Relatório ZAP | GitHub → Actions → Security → artefato `zap-report` |
-| Checklist segurança | [`SECURITY.md`](SECURITY.md) |
+| Recurso             | Onde                                                |
+| ------------------- | --------------------------------------------------- |
+| Supabase projeto    | [Dashboard](https://supabase.com/dashboard)         |
+| Vercel deploy       | [Dashboard Vercel](https://vercel.com)              |
+| Relatório ZAP       | GitHub → Actions → Security → artefato `zap-report` |
+| Checklist segurança | [`SECURITY.md`](SECURITY.md)                        |

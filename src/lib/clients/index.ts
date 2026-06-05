@@ -41,4 +41,8 @@ export {
   isClosedStatus,
   isExpiredClosedClient,
 } from "./retention";
-export { probePedidosBackend, usesCloudPedidos, type PedidosBackendStatus } from "./backend";
+export {
+  probePedidosBackend,
+  usesCloudPedidos,
+  type PedidosBackendStatus,
+} from "./backend";

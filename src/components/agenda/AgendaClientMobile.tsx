@@ -146,7 +146,10 @@ export function AgendaClientMobile({
   getBlock: (dia: string, hora: number) => AgendaSlot[];
   onSelect?: (block: AgendaSlot[]) => void;
 }) {
-  const selIdSet = useMemo(() => new Set(selectedBlockIds ?? []), [selectedBlockIds]);
+  const selIdSet = useMemo(
+    () => new Set(selectedBlockIds ?? []),
+    [selectedBlockIds],
+  );
   const selStart = selectedBlockIds?.[0] ?? null;
 
   const [selectedDia, setSelectedDia] = useState(() =>
@@ -192,7 +195,11 @@ export function AgendaClientMobile({
         Semana operacional: {formatWeekRange(semanaInicio)}
       </p>
 
-      <div className="grid grid-cols-7 gap-1 mb-3" role="tablist" aria-label="Dias da semana">
+      <div
+        className="grid grid-cols-7 gap-1 mb-3"
+        role="tablist"
+        aria-label="Dias da semana"
+      >
         {DIAS.map((dia) => {
           const isActive = selectedDia === dia;
           const hasSlots = (validCountByDay[dia] ?? 0) > 0;
@@ -258,7 +265,8 @@ export function AgendaClientMobile({
         {HORAS.map((h) => {
           const slot = slotMap.get(`${selectedDia}:${h}`);
           const status = slot?.status ?? "bloqueado";
-          const valid = !!slot && status === "disponivel" && isValidStart(selectedDia, h);
+          const valid =
+            !!slot && status === "disponivel" && isValidStart(selectedDia, h);
           const state = resolveClientState({
             dia: selectedDia,
             hora: h,
@@ -275,7 +283,10 @@ export function AgendaClientMobile({
           const endH = h + duracao;
           const timeLabel = `${String(h).padStart(2, "0")}:00`;
           const rangeLabel =
-            duracao > 1 && (valid || state.startsWith("selected") || state.startsWith("preview"))
+            duracao > 1 &&
+            (valid ||
+              state.startsWith("selected") ||
+              state.startsWith("preview"))
               ? `${timeLabel} – ${String(endH).padStart(2, "0")}:00`
               : timeLabel;
 
@@ -302,7 +313,9 @@ export function AgendaClientMobile({
                     </span>
                   )}
                 </span>
-                <span className="text-[10px] opacity-80 shrink-0">{subtitle}</span>
+                <span className="text-[10px] opacity-80 shrink-0">
+                  {subtitle}
+                </span>
               </button>
             </li>
           );
@@ -318,12 +331,18 @@ export function AgendaClientMobileSkeleton() {
       <div className="mb-3 h-3 w-48 rounded bg-white/5 animate-pulse" />
       <div className="grid grid-cols-7 gap-1 mb-3">
         {DIAS.map((d) => (
-          <div key={d} className="h-[48px] rounded-lg bg-white/[0.04] animate-pulse" />
+          <div
+            key={d}
+            className="h-[48px] rounded-lg bg-white/[0.04] animate-pulse"
+          />
         ))}
       </div>
       <div className="space-y-1.5">
         {HORAS.map((h) => (
-          <div key={h} className="h-12 rounded-xl bg-white/[0.03] animate-pulse" />
+          <div
+            key={h}
+            className="h-12 rounded-xl bg-white/[0.03] animate-pulse"
+          />
         ))}
       </div>
     </div>

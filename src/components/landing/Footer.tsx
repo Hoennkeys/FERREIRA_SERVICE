@@ -15,13 +15,10 @@ export function Footer() {
             className="cursor-default hover:cursor-pointer text-left transition hover:text-white/50"
             aria-label="Linha de comando tática"
           >
-            Ferreira na Voz <span className="text-white/25">//</span> Linha de Comando Tática ©{" "}
-            {new Date().getFullYear()}
+            Ferreira na Voz <span className="text-white/25">//</span> Linha de
+            Comando Tática © {new Date().getFullYear()}
           </Link>
-          <Link
-            to="/privacidade"
-            className="transition hover:text-white/55"
-          >
+          <Link to="/privacidade" className="transition hover:text-white/55">
             Política de Privacidade
           </Link>
         </div>

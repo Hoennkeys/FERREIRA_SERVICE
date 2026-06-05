@@ -1,7 +1,15 @@
 import { supabase } from "../supabase";
-import type { LiveSessionStore, SessionListener, StartSessionInput } from "./store";
+import type {
+  LiveSessionStore,
+  SessionListener,
+  StartSessionInput,
+} from "./store";
 import { getElapsedSeconds } from "./utils";
-import { INACTIVE_SESSION, parseSession, type LiveServiceSession } from "./types";
+import {
+  INACTIVE_SESSION,
+  parseSession,
+  type LiveServiceSession,
+} from "./types";
 
 /**
  * Supabase-backed implementation (single-row table + Realtime).
