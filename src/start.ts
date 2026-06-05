@@ -1,6 +1,26 @@
-import { createStart, createMiddleware } from "@tanstack/react-start";
+import {
+  createStart,
+  createMiddleware,
+  createCsrfMiddleware,
+} from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
+import { safeError } from "./lib/safe-log";
+import { getClientIpFromRequest } from "./lib/security/client-ip.server";
+
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === "serverFn",
+});
+
+const requestContextMiddleware = createMiddleware({ type: "request" }).server(
+  async ({ request, next }) => {
+    return next({
+      context: {
+        clientIp: getClientIpFromRequest(request),
+      },
+    });
+  },
+);
 
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
@@ -9,7 +29,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
-    console.error(error);
+    safeError("start", error);
     return new Response(renderErrorPage(), {
       status: 500,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -18,5 +38,9 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [errorMiddleware],
+  requestMiddleware: [
+    requestContextMiddleware,
+    csrfMiddleware,
+    errorMiddleware,
+  ],
 }));

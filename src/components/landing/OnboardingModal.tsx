@@ -10,11 +10,16 @@ import {
   getWeekStart,
   type AgendaSlot,
 } from "@/lib/agenda";
+import { verifyOnboardingGate } from "@/lib/api/onboarding-guard.functions";
 import {
   clientsStore,
   probePedidosBackend,
   type PedidosBackendStatus,
 } from "@/lib/clients";
+import {
+  isTurnstileSiteKeyConfigured,
+  TurnstileWidget,
+} from "@/components/landing/TurnstileWidget";
 
 const WHATSAPP = "5581982180780";
 
@@ -118,8 +123,11 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   const [selectedBlock, setSelectedBlock] = useState<AgendaSlot[] | null>(null);
   const [booking, setBooking] = useState(false);
   const [confirmError, setConfirmError] = useState<
-    "order" | "slot" | "setup" | "backend" | null
+    "order" | "slot" | "setup" | "backend" | "captcha" | "rate_limit" | null
   >(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [honeypot, setHoneypot] = useState("");
+  const turnstileRequired = isTurnstileSiteKeyConfigured();
   const [backendStatus, setBackendStatus] = useState<PedidosBackendStatus | null>(
     null,
   );
@@ -176,6 +184,8 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     setWhatsappUrl(null);
     setCopyCopied(false);
     setPixGenFailed(false);
+    setTurnstileToken(null);
+    setHoneypot("");
     setNome("");
     setWhatsapp("");
     setDiscord("");
@@ -220,6 +230,21 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
       return;
     }
 
+    const gate = await verifyOnboardingGate({
+      data: {
+        turnstileToken: turnstileToken ?? undefined,
+        website: honeypot,
+      },
+    });
+    if (!gate.ok) {
+      setConfirmError(
+        gate.reason === "rate_limited" || gate.reason === "bot_detected"
+          ? "rate_limit"
+          : "captcha",
+      );
+      return;
+    }
+
     setBooking(true);
     setConfirmError(null);
 
@@ -250,7 +275,11 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     if (!orderResult.ok) {
       setBooking(false);
       setConfirmError(
-        orderResult.reason === "setup" ? "setup" : "order",
+        orderResult.reason === "setup"
+          ? "setup"
+          : orderResult.reason === "rate_limit"
+            ? "rate_limit"
+            : "order",
       );
       if (orderResult.reason === "setup") {
         setBackendStatus({
@@ -425,6 +454,22 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               inputMode="numeric"
             />
 
+            <div
+              className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
+              aria-hidden
+            >
+              <label htmlFor="onboarding-website">Website</label>
+              <input
+                id="onboarding-website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
+
             <button
               type="submit"
               className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_0_30px_rgba(0,149,255,0.5)] transition hover:bg-primary/90 hover:shadow-[0_0_50px_rgba(0,149,255,0.7)]"
@@ -492,6 +537,22 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
                   Não foi possível registrar o pedido. Verifique sua conexão e tente novamente.
                 </p>
               )}
+              {confirmError === "captcha" && (
+                <p className="mt-3 text-xs text-amber-400">
+                  Complete a verificação de segurança abaixo antes de confirmar.
+                </p>
+              )}
+              {confirmError === "rate_limit" && (
+                <p className="mt-3 text-xs text-amber-400">
+                  Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.
+                </p>
+              )}
+
+              <TurnstileWidget
+                onToken={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                onError={() => setTurnstileToken(null)}
+              />
 
               {selectedBlock && selectedBlock.length > 0 && (() => {
                 const startH = selectedBlock[0].hora_inicio;
@@ -529,7 +590,8 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
                   selectedBlock.length === 0 ||
                   booking ||
                   backendChecking ||
-                  backendStatus?.status !== "ready"
+                  backendStatus?.status !== "ready" ||
+                  (turnstileRequired && !turnstileToken)
                 }
                 className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-[0_0_30px_rgba(0,149,255,0.5)] transition hover:bg-primary/90 hover:shadow-[0_0_50px_rgba(0,149,255,0.7)] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
               >

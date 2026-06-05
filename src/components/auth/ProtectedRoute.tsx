@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "@tanstack/react-router";
 import type { Session } from "@supabase/supabase-js";
 
+import { isCurrentUserAdmin, signOutAndClearSession } from "@/lib/auth";
+import { sanitizeRedirectPath } from "@/lib/safe-redirect";
 import { supabase } from "@/lib/supabase";
 
 type ProtectedRouteProps = {
@@ -11,25 +13,42 @@ type ProtectedRouteProps = {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
   const [session, setSession] = useState<Session | null>(null);
+  const [adminOk, setAdminOk] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setSession(data.session);
-        setLoading(false);
+    async function verify(next: Session | null) {
+      if (!next) {
+        if (mounted) {
+          setSession(null);
+          setAdminOk(false);
+          setLoading(false);
+        }
+        return;
       }
+      const allowed = await isCurrentUserAdmin();
+      if (!mounted) return;
+      if (!allowed) {
+        await signOutAndClearSession();
+        setSession(null);
+        setAdminOk(false);
+      } else {
+        setSession(next);
+        setAdminOk(true);
+      }
+      setLoading(false);
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      void verify(data.session);
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (mounted) {
-        setSession(nextSession);
-        setLoading(false);
-      }
+      void verify(nextSession);
     });
 
     return () => {
@@ -54,11 +73,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  if (!session) {
+  if (!session || !adminOk) {
     return (
       <Navigate
         to="/login"
-        search={{ redirect: location.pathname }}
+        search={{ redirect: sanitizeRedirectPath(location.pathname) }}
         replace
       />
     );

@@ -150,6 +150,14 @@ class SupabaseClientsStore implements ClientsStore {
 
     if (error || !id || !claimToken) {
       console.warn("[clients] createOrder error:", error?.code, error?.message);
+      const msg = error?.message ?? "";
+      if (
+        msg.includes("rate_limit") ||
+        msg.includes("pending_limit") ||
+        msg.includes("invalid_whatsapp")
+      ) {
+        return { ok: false, reason: "rate_limit" };
+      }
       if (isMissingTableError(error?.code, error?.message)) {
         return { ok: false, reason: "setup" };
       }

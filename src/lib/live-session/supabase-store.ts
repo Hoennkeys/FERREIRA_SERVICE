@@ -34,9 +34,10 @@ import { INACTIVE_SESSION, parseSession, type LiveServiceSession } from "./types
  *     on public.live_service_session for select
  *     to anon, authenticated using (true);
  *
- *   create policy "authenticated can update session"
+ *   create policy "live_session_update_admin"
  *     on public.live_service_session for update
- *     to authenticated using (true) with check (true);
+ *     to authenticated using (public.is_admin()) with check (public.is_admin());
+ *   -- Após Fase 1: execute supabase/migrations/security_phase2_hardening.sql
  *
  *   -- expose the table to Realtime
  *   alter publication supabase_realtime add table public.live_service_session;

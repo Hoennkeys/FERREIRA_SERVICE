@@ -55,7 +55,7 @@ export type CreateOrderInput = {
 
 export type CreateOrderResult =
   | { ok: true; id: string; claimToken: string }
-  | { ok: false; reason: "setup" | "unknown" };
+  | { ok: false; reason: "setup" | "unknown" | "rate_limit" };
 
 export type DeleteOrderOptions = {
   /** Token retornado por create_pedido_homepage; obrigatório para rollback na landing. */

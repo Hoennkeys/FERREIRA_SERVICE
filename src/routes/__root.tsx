@@ -9,6 +9,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
 import { reportLovableError } from '../lib/lovable-error-reporting'
+import { safeError } from '../lib/safe-log'
 import '../styles.css'
 
 function NotFoundComponent() {
@@ -34,7 +35,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error)
+  safeError('root', error)
   const router = useRouter()
   useEffect(() => {
     reportLovableError(error, { boundary: 'tanstack_root_error_component' })

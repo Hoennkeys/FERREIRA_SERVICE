@@ -55,6 +55,10 @@ drop policy if exists "agenda_update_admin" on public.disponibilidade_agenda;
 
 -- ── 4. Policies novas — pedidos_cliente ────────────────────────
 
+drop policy if exists "pedidos_select_admin" on public.pedidos_cliente;
+drop policy if exists "pedidos_update_admin" on public.pedidos_cliente;
+drop policy if exists "pedidos_delete_admin" on public.pedidos_cliente;
+
 create policy "pedidos_select_admin"
   on public.pedidos_cliente for select
   to authenticated
@@ -94,6 +98,11 @@ grant execute on function public.pedido_allows_homepage_reserva(uuid) to anon, a
 
 -- ── 6. Policies novas — reservas_semana ────────────────────────
 
+drop policy if exists "reservas_select_public" on public.reservas_semana;
+drop policy if exists "reservas_insert_homepage" on public.reservas_semana;
+drop policy if exists "reservas_update_admin" on public.reservas_semana;
+drop policy if exists "reservas_delete_admin" on public.reservas_semana;
+
 create policy "reservas_select_public"
   on public.reservas_semana for select
   using (true);
@@ -117,6 +126,8 @@ create policy "reservas_delete_admin"
 -- ── 7. Policies — disponibilidade_agenda ───────────────────────
 
 drop policy if exists "agenda_select_public" on public.disponibilidade_agenda;
+drop policy if exists "agenda_update_admin" on public.disponibilidade_agenda;
+
 create policy "agenda_select_public"
   on public.disponibilidade_agenda for select
   using (true);
@@ -232,6 +243,17 @@ declare
   v_deleted int;
 begin
   if p_id is null or p_claim_token is null then
+    return false;
+  end if;
+
+  if not exists (
+    select 1
+    from public.pedidos_cliente
+    where id = p_id
+      and claim_token = p_claim_token
+      and origem = 'homepage'
+      and status = 'Pendente'
+  ) then
     return false;
   end if;
 
