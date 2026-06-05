@@ -6,7 +6,10 @@ export function Header() {
   return (
     <header className="fixed top-0 inset-x-0 z-40 border-b border-white/5 bg-black/60 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center justify-between">
-        <a href="#top" className="text-[11px] sm:text-xs font-semibold tracking-[0.18em] text-white">
+        <a
+          href="#top"
+          className="text-[11px] sm:text-xs font-semibold tracking-[0.18em] text-white"
+        >
           FERREIRA NA VOZ <span className="text-primary">//</span> SERVICES
         </a>
         <a

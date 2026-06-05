@@ -1,4 +1,10 @@
-import { existsSync, rmSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import {
+  existsSync,
+  rmSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+} from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -12,7 +18,9 @@ const configPath = join(root, ".vercel", "output", "config.json");
 const staticIndex = join(staticRoot, "index.html");
 if (existsSync(staticIndex)) {
   rmSync(staticIndex);
-  console.log("🗑️  Removed static/index.html so SSR function handles root requests.");
+  console.log(
+    "🗑️  Removed static/index.html so SSR function handles root requests.",
+  );
 } else {
   console.log("ℹ️  static/index.html not found — nothing to remove.");
 }
@@ -38,8 +46,10 @@ if (rendererPath) {
   // Only patch if it's the static fallback (does not already call __nitro_vite_envs__)
   if (!original.includes("__nitro_vite_envs__")) {
     // Extract the h3 import line so we keep the same h3 reference
-    const h3Import = original.match(/^import \{ .* \} from ".*_libs\/h3\.mjs";/m)?.[0] ?? '';
-    const fallbackHtml = original.match(/new HTTPResponse\('([\s\S]*?)',\s*\{/)?.[1] ?? '';
+    const h3Import =
+      original.match(/^import \{ .* \} from ".*_libs\/h3\.mjs";/m)?.[0] ?? "";
+    const fallbackHtml =
+      original.match(/new HTTPResponse\('([\s\S]*?)',\s*\{/)?.[1] ?? "";
     const patched = `${h3Import}
 import "../_libs/rou3.mjs";
 import "../_libs/srvx.mjs";
@@ -63,7 +73,9 @@ export { renderIndexHTML as default };
     writeFileSync(rendererPath, patched, "utf-8");
     console.log(`✅ Patched ${rendererPath} to call SSR service.`);
   } else {
-    console.log("ℹ️  renderer-template.mjs already calls SSR service — no patch needed.");
+    console.log(
+      "ℹ️  renderer-template.mjs already calls SSR service — no patch needed.",
+    );
   }
 } else {
   console.warn("⚠️  renderer-template.mjs not found — skipping SSR patch.");
@@ -78,7 +90,11 @@ try {
   if (!hasSsrRoute) {
     console.warn("⚠️  No __server route in config.json — patching.");
     config.routes = [
-      { src: "/assets/(.*)", headers: { "cache-control": "public, max-age=31536000, immutable" }, continue: true },
+      {
+        src: "/assets/(.*)",
+        headers: { "cache-control": "public, max-age=31536000, immutable" },
+        continue: true,
+      },
       { handle: "filesystem" },
       { src: "/(.*)", dest: "/__server" },
     ];

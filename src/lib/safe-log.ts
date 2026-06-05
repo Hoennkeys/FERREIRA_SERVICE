@@ -20,7 +20,10 @@ function extractErrorFields(error: unknown): Record<string, string> {
   if (error == null) return { message: "unknown error" };
   if (typeof error === "string") return { message: error };
   if (error instanceof Error) {
-    const out: Record<string, string> = { message: error.message, name: error.name };
+    const out: Record<string, string> = {
+      message: error.message,
+      name: error.name,
+    };
     const code = (error as Error & { code?: string }).code;
     if (code) out.code = code;
     return out;
@@ -44,7 +47,9 @@ export function safeError(context: string, error: unknown): void {
 }
 
 /** Redige chaves sensíveis de objetos antes de log (uso pontual). */
-export function redactForLog<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+export function redactForLog<T extends Record<string, unknown>>(
+  obj: T,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     out[key] = REDACTED_KEYS.has(key.toLowerCase()) ? "[redacted]" : value;

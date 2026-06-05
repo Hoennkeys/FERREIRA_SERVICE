@@ -12,7 +12,8 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "Ferreira na Voz // Services — Operações de alta performance para Tibia",
+        title:
+          "Ferreira na Voz // Services — Operações de alta performance para Tibia",
       },
       {
         name: "description",

@@ -24,12 +24,12 @@ import {
 // ── Client-slot visual state ──────────────────────────────────────────────────
 
 type ClientState =
-  | "selectedStart"    // first slot of the confirmed block
-  | "selectedBlock"    // continuation of the confirmed block
-  | "hoverStart"       // first slot of the hover preview
-  | "hoverBlock"       // continuation of the hover preview
-  | "validStart"       // disponivel + full block fits → clickable
-  | "invalidStart"     // disponivel but block doesn't fit → disabled
+  | "selectedStart" // first slot of the confirmed block
+  | "selectedBlock" // continuation of the confirmed block
+  | "hoverStart" // first slot of the hover preview
+  | "hoverBlock" // continuation of the hover preview
+  | "validStart" // disponivel + full block fits → clickable
+  | "invalidStart" // disponivel but block doesn't fit → disabled
   | "bloqueado"
   | "agendado";
 
@@ -93,50 +93,68 @@ function GridSkeleton({ mode }: { mode: "client" | "admin" }) {
 function DesktopGridSkeleton() {
   return (
     <div className="min-w-[540px]">
-        <div className="grid grid-cols-8 gap-1 mb-1">
-          <div />
+      <div className="grid grid-cols-8 gap-1 mb-1">
+        <div />
+        {DIAS.map((d) => (
+          <div
+            key={d}
+            className="text-center text-[9px] tracking-widest text-white/30 font-semibold pb-1"
+          >
+            {DIAS_LABELS[d]}
+          </div>
+        ))}
+      </div>
+      {HORAS.map((h) => (
+        <div key={h} className="grid grid-cols-8 gap-1 mb-1">
+          <div className="flex items-center justify-end pr-2 text-[9px] text-white/25 font-mono">
+            {String(h).padStart(2, "0")}h
+          </div>
           {DIAS.map((d) => (
             <div
               key={d}
-              className="text-center text-[9px] tracking-widest text-white/30 font-semibold pb-1"
-            >
-              {DIAS_LABELS[d]}
-            </div>
+              className="h-9 rounded border border-white/5 bg-white/[0.03] animate-pulse"
+            />
           ))}
         </div>
-        {HORAS.map((h) => (
-          <div key={h} className="grid grid-cols-8 gap-1 mb-1">
-            <div className="flex items-center justify-end pr-2 text-[9px] text-white/25 font-mono">
-              {String(h).padStart(2, "0")}h
-            </div>
-            {DIAS.map((d) => (
-              <div
-                key={d}
-                className="h-9 rounded border border-white/5 bg-white/[0.03] animate-pulse"
-              />
-            ))}
-          </div>
-        ))}
+      ))}
     </div>
   );
 }
 
 // ── Legend ───────────────────────────────────────────────────────────────────
 
-function Legend({ mode, duracao }: { mode: "client" | "admin"; duracao: number }) {
+function Legend({
+  mode,
+  duracao,
+}: {
+  mode: "client" | "admin";
+  duracao: number;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3">
-      <LegendItem color="bg-cyan-500/15 border-cyan-500/35" label="Disponível" />
+      <LegendItem
+        color="bg-cyan-500/15 border-cyan-500/35"
+        label="Disponível"
+      />
       {mode === "client" && (
         <>
-          <LegendItem color="bg-cyan-400 border-cyan-300" label={`Bloco selecionado (${duracao}h)`} />
-          <LegendItem color="bg-white/5 border-white/10" label="Indisponível / sem espaço" />
+          <LegendItem
+            color="bg-cyan-400 border-cyan-300"
+            label={`Bloco selecionado (${duracao}h)`}
+          />
+          <LegendItem
+            color="bg-white/5 border-white/10"
+            label="Indisponível / sem espaço"
+          />
         </>
       )}
       {mode === "admin" && (
         <>
           <LegendItem color="bg-white/5 border-white/10" label="Bloqueado" />
-          <LegendItem color="bg-primary/10 border-primary/30" label="Clique no dia/hora → massa" />
+          <LegendItem
+            color="bg-primary/10 border-primary/30"
+            label="Clique no dia/hora → massa"
+          />
         </>
       )}
       <LegendItem color="bg-red-500/20 border-red-500/30" label="Agendado" />
@@ -157,7 +175,9 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 
 function bulkTarget(slotsToChange: AgendaSlot[]): SlotStatus {
   const changeable = slotsToChange.filter((s) => s.status !== "agendado");
-  return changeable.some((s) => s.status === "disponivel") ? "bloqueado" : "disponivel";
+  return changeable.some((s) => s.status === "disponivel")
+    ? "bloqueado"
+    : "disponivel";
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -264,7 +284,9 @@ export function AgendaGrid({
     const target = bulkTarget(slotsForDay);
     setSlots((prev) =>
       prev.map((s) =>
-        s.dia_da_semana === dia && s.status !== "agendado" ? { ...s, status: target } : s,
+        s.dia_da_semana === dia && s.status !== "agendado"
+          ? { ...s, status: target }
+          : s,
       ),
     );
     onBulkDay?.(dia, slotsForDay);
@@ -276,7 +298,9 @@ export function AgendaGrid({
     const target = bulkTarget(slotsForHora);
     setSlots((prev) =>
       prev.map((s) =>
-        s.hora_inicio === hora && s.status !== "agendado" ? { ...s, status: target } : s,
+        s.hora_inicio === hora && s.status !== "agendado"
+          ? { ...s, status: target }
+          : s,
       ),
     );
     onBulkHora?.(hora, slotsForHora);
@@ -292,7 +316,11 @@ export function AgendaGrid({
 
   const desktopGrid = (
     <div
-      className={isAdmin ? "w-full overflow-x-auto" : "hidden md:block w-full overflow-x-auto"}
+      className={
+        isAdmin
+          ? "w-full overflow-x-auto"
+          : "hidden md:block w-full overflow-x-auto"
+      }
       onMouseLeave={() => {
         if (!isAdmin) {
           setHoveredDia(null);
@@ -320,14 +348,22 @@ export function AgendaGrid({
               );
             }
             const slotsForDay = slots.filter((s) => s.dia_da_semana === dia);
-            const hasChangeable = slotsForDay.some((s) => s.status !== "agendado");
+            const hasChangeable = slotsForDay.some(
+              (s) => s.status !== "agendado",
+            );
             const dayTarget = bulkTarget(slotsForDay);
             return (
               <button
                 key={dia}
                 type="button"
                 disabled={!hasChangeable}
-                title={hasChangeable ? (dayTarget === "bloqueado" ? `Bloquear toda ${DIAS_LABELS[dia]}` : `Liberar toda ${DIAS_LABELS[dia]}`) : undefined}
+                title={
+                  hasChangeable
+                    ? dayTarget === "bloqueado"
+                      ? `Bloquear toda ${DIAS_LABELS[dia]}`
+                      : `Liberar toda ${DIAS_LABELS[dia]}`
+                    : undefined
+                }
                 onClick={() => handleBulkDay(dia)}
                 className={[
                   "flex flex-col items-center gap-0.5 pb-1 rounded transition-all duration-150",
@@ -338,7 +374,11 @@ export function AgendaGrid({
                 ].join(" ")}
               >
                 {formatDayColumnLabel(dia, semanaInicio)}
-                {hasChangeable && <span className="text-[7px] text-white/20 leading-none">▼▲</span>}
+                {hasChangeable && (
+                  <span className="text-[7px] text-white/20 leading-none">
+                    ▼▲
+                  </span>
+                )}
               </button>
             );
           })}
@@ -347,33 +387,42 @@ export function AgendaGrid({
         {/* ── Hour rows ────────────────────────────────────────────────── */}
         {HORAS.map((h) => (
           <div key={h} className="grid grid-cols-8 gap-1 mb-1">
-
             {/* Time label */}
             {!isAdmin ? (
               <div className="flex items-center justify-end pr-2 text-[9px] text-white/30 font-mono">
                 {String(h).padStart(2, "0")}h
               </div>
-            ) : (() => {
-              const slotsForHora = slots.filter((s) => s.hora_inicio === h);
-              const hasChangeable = slotsForHora.some((s) => s.status !== "agendado");
-              const horaTarget = bulkTarget(slotsForHora);
-              return (
-                <button
-                  type="button"
-                  disabled={!hasChangeable}
-                  title={hasChangeable ? (horaTarget === "bloqueado" ? `Bloquear todas as ${String(h).padStart(2,"0")}:00` : `Liberar todas as ${String(h).padStart(2,"0")}:00`) : undefined}
-                  onClick={() => handleBulkHora(h)}
-                  className={[
-                    "flex items-center justify-end pr-2 rounded transition-all duration-150 text-[9px] font-mono",
-                    hasChangeable
-                      ? "text-white/40 hover:text-primary hover:bg-primary/10 cursor-pointer"
-                      : "text-white/15 cursor-default",
-                  ].join(" ")}
-                >
-                  {String(h).padStart(2, "0")}h
-                </button>
-              );
-            })()}
+            ) : (
+              (() => {
+                const slotsForHora = slots.filter((s) => s.hora_inicio === h);
+                const hasChangeable = slotsForHora.some(
+                  (s) => s.status !== "agendado",
+                );
+                const horaTarget = bulkTarget(slotsForHora);
+                return (
+                  <button
+                    type="button"
+                    disabled={!hasChangeable}
+                    title={
+                      hasChangeable
+                        ? horaTarget === "bloqueado"
+                          ? `Bloquear todas as ${String(h).padStart(2, "0")}:00`
+                          : `Liberar todas as ${String(h).padStart(2, "0")}:00`
+                        : undefined
+                    }
+                    onClick={() => handleBulkHora(h)}
+                    className={[
+                      "flex items-center justify-end pr-2 rounded transition-all duration-150 text-[9px] font-mono",
+                      hasChangeable
+                        ? "text-white/40 hover:text-primary hover:bg-primary/10 cursor-pointer"
+                        : "text-white/15 cursor-default",
+                    ].join(" ")}
+                  >
+                    {String(h).padStart(2, "0")}h
+                  </button>
+                );
+              })()
+            )}
 
             {/* Slot buttons */}
             {DIAS.map((d) => {
@@ -388,9 +437,11 @@ export function AgendaGrid({
                     onClick={() => slot && onAdminToggle?.(slot)}
                     disabled={!slot || status === "agendado"}
                     title={
-                      status === "agendado" ? "Horário já agendado"
-                      : status === "bloqueado" ? "Clique para liberar"
-                      : "Clique para bloquear"
+                      status === "agendado"
+                        ? "Horário já agendado"
+                        : status === "bloqueado"
+                          ? "Clique para liberar"
+                          : "Clique para bloquear"
                     }
                     className={adminSlotClass(status)}
                   />
@@ -408,7 +459,8 @@ export function AgendaGrid({
                 h < hoveredHora + duracao;
               const isHoverStart = inHover && h === hoveredHora;
 
-              const valid = !!slot && status === "disponivel" && isValidStart(d, h);
+              const valid =
+                !!slot && status === "disponivel" && isValidStart(d, h);
 
               let clientState: ClientState;
               if (inSelected) {
@@ -420,7 +472,8 @@ export function AgendaGrid({
               } else if (valid) {
                 clientState = "validStart";
               } else {
-                clientState = status === "disponivel" ? "invalidStart" : "bloqueado";
+                clientState =
+                  status === "disponivel" ? "invalidStart" : "bloqueado";
               }
 
               const isClickable = valid;
@@ -442,7 +495,7 @@ export function AgendaGrid({
                   }}
                   title={
                     clientState === "validStart"
-                      ? `Selecionar bloco de ${duracao}h a partir das ${String(h).padStart(2,"0")}:00`
+                      ? `Selecionar bloco de ${duracao}h a partir das ${String(h).padStart(2, "0")}:00`
                       : clientState === "agendado"
                         ? "Horário já agendado"
                         : undefined

@@ -65,12 +65,12 @@ VITE_TWITCH_PARENT_HOST=www.seudominio.com.br
 
 ## Problemas comuns
 
-| Sintoma | Solução |
-|--------|---------|
-| Aviso amarelo “configure TWITCH_CLIENT_ID” | `.env` local ou Vercel sem as duas variáveis |
-| `npm run twitch:check` → `missing_credentials` | Arquivo `.env` na raiz ou nomes errados |
-| `token_failed` / `api_failed` | Client Secret errado ou app não “Confidential” |
-| Live na Twitch mas site offline | Aguarde o poll (~45s) ou recarregue; confira o canal `ferreiranavoz` |
-| Player preto no embed | Confira `parent` (localhost / domínio do deploy) |
+| Sintoma                                        | Solução                                                              |
+| ---------------------------------------------- | -------------------------------------------------------------------- |
+| Aviso amarelo “configure TWITCH_CLIENT_ID”     | `.env` local ou Vercel sem as duas variáveis                         |
+| `npm run twitch:check` → `missing_credentials` | Arquivo `.env` na raiz ou nomes errados                              |
+| `token_failed` / `api_failed`                  | Client Secret errado ou app não “Confidential”                       |
+| Live na Twitch mas site offline                | Aguarde o poll (~45s) ou recarregue; confira o canal `ferreiranavoz` |
+| Player preto no embed                          | Confira `parent` (localhost / domínio do deploy)                     |
 
 Canal monitorado pela API: **`ferreiranavoz`** (`src/lib/twitch.ts`).

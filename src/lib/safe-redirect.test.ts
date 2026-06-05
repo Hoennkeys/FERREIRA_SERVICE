@@ -19,10 +19,7 @@ describe("sanitizeRedirectPath", () => {
 
   it("allows /dispatch and subpaths only", () => {
     assert.equal(sanitizeRedirectPath("/dispatch"), "/dispatch");
-    assert.equal(
-      sanitizeRedirectPath("/dispatch/agenda"),
-      "/dispatch/agenda",
-    );
+    assert.equal(sanitizeRedirectPath("/dispatch/agenda"), "/dispatch/agenda");
     assert.equal(sanitizeRedirectPath("/login"), DEFAULT_AUTH_REDIRECT);
     assert.equal(sanitizeRedirectPath("/"), DEFAULT_AUTH_REDIRECT);
   });

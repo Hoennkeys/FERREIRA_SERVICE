@@ -21,12 +21,12 @@ flowchart TB
 
 ### Realtime (Supabase)
 
-| Tabela | Quem assina | RLS |
-|--------|-------------|-----|
-| `pedidos_cliente` | Painel admin | Só `is_admin()` — JWT admin obrigatório |
-| `dispatch_queue` | Painel (se backend supabase) | Admin only (Fase 2) |
-| `live_service_session` | Landing telemetria | Leitura pública; escrita admin |
-| `reservas_semana`, `disponibilidade_agenda` | Landing agenda | SELECT público intencional (grade) |
+| Tabela                                      | Quem assina                  | RLS                                     |
+| ------------------------------------------- | ---------------------------- | --------------------------------------- |
+| `pedidos_cliente`                           | Painel admin                 | Só `is_admin()` — JWT admin obrigatório |
+| `dispatch_queue`                            | Painel (se backend supabase) | Admin only (Fase 2)                     |
+| `live_service_session`                      | Landing telemetria           | Leitura pública; escrita admin          |
+| `reservas_semana`, `disponibilidade_agenda` | Landing agenda               | SELECT público intencional (grade)      |
 
 Canais sensíveis (`pedidos_cliente`, `dispatch_queue`) exigem sessão admin; anon não recebe eventos de pedidos mesmo com subscription.
 
@@ -89,12 +89,12 @@ select * from admin_monitoring_homepage_stats;
 
 ## Thresholds sugeridos
 
-| Métrica | Normal | Investigar | Ação |
-|---------|--------|------------|------|
-| Pedidos homepage / hora | 0–5 | >20 | Ver [`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) §2 |
-| `homepage_rate_events` / hora | 0–15 | >50 | Possível bot; revisar Turnstile |
-| Mesmo `whatsapp_hash` / hora | ≤3 | >5 | Rate limit pode estar falhando |
-| Erros `rate_limit_global` nos logs | esporádico | contínuo | Considerar revoke RPC temporário |
+| Métrica                            | Normal     | Investigar | Ação                                                  |
+| ---------------------------------- | ---------- | ---------- | ----------------------------------------------------- |
+| Pedidos homepage / hora            | 0–5        | >20        | Ver [`INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) §2 |
+| `homepage_rate_events` / hora      | 0–15       | >50        | Possível bot; revisar Turnstile                       |
+| Mesmo `whatsapp_hash` / hora       | ≤3         | >5         | Rate limit pode estar falhando                        |
+| Erros `rate_limit_global` nos logs | esporádico | contínuo   | Considerar revoke RPC temporário                      |
 
 ---
 

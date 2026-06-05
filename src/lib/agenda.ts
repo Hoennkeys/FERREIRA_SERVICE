@@ -34,9 +34,7 @@ function readLocalReservasForWeek(semanaInicio: string): ReservaSemana[] {
   return readLocalReservasAll().filter((r) => r.semana_inicio === semanaInicio);
 }
 
-function insertLocalReservas(
-  rows: Omit<ReservaSemana, "id">[],
-): boolean {
+function insertLocalReservas(rows: Omit<ReservaSemana, "id">[]): boolean {
   const all = readLocalReservasAll();
   for (const row of rows) {
     const conflict = all.some(
@@ -55,7 +53,9 @@ function insertLocalReservas(
 }
 
 function deleteLocalReservasForPedido(pedidoId: string): void {
-  writeLocalReservasAll(readLocalReservasAll().filter((r) => r.pedido_id !== pedidoId));
+  writeLocalReservasAll(
+    readLocalReservasAll().filter((r) => r.pedido_id !== pedidoId),
+  );
 }
 
 export function isReservasLocalFallback(): boolean {
@@ -187,18 +187,22 @@ export function getSlotDateTime(
   return d;
 }
 
-export function formatDayColumnLabel(dia: string, semanaInicio: string): string {
+export function formatDayColumnLabel(
+  dia: string,
+  semanaInicio: string,
+): string {
   const offset = DIA_WEEK_OFFSET[dia] ?? 0;
   const d = parseLocalDate(semanaInicio);
   d.setDate(d.getDate() + offset);
-  const dateStr = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  const dateStr = d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
   return `${DIAS_LABELS[dia]} ${dateStr}`;
 }
 
 /** Reserva ativa bloqueia; finalizada não bloqueia (liberada ao encerrar pedido). */
-export function isReservaBlocking(
-  reserva: ReservaSemana | undefined,
-): boolean {
+export function isReservaBlocking(reserva: ReservaSemana | undefined): boolean {
   return reserva?.status === "ativa";
 }
 
@@ -251,7 +255,10 @@ export async function fetchReservasForWeek(
     .eq("semana_inicio", semanaInicio);
 
   if (error) {
-    if (isMissingTableError(error.code, error.message) && allowReservasLocalFallback()) {
+    if (
+      isMissingTableError(error.code, error.message) &&
+      allowReservasLocalFallback()
+    ) {
       reservasUseLocalFallback = true;
       console.warn(
         "[agenda] reservas_semana ausente — usando reservas locais (rode npm run db:setup)",
@@ -259,7 +266,9 @@ export async function fetchReservasForWeek(
       return readLocalReservasForWeek(semanaInicio);
     }
     if (isMissingTableError(error.code, error.message)) {
-      console.warn("[agenda] reservas_semana ausente — execute supabase/setup.sql");
+      console.warn(
+        "[agenda] reservas_semana ausente — execute supabase/setup.sql",
+      );
     }
     console.warn("[agenda] fetchReservasForWeek error:", error.message);
     return [];
@@ -267,7 +276,9 @@ export async function fetchReservasForWeek(
   return (data ?? []) as ReservaSemana[];
 }
 
-export function buildReservaMap(reservas: ReservaSemana[]): Map<string, ReservaSemana> {
+export function buildReservaMap(
+  reservas: ReservaSemana[],
+): Map<string, ReservaSemana> {
   const map = new Map<string, ReservaSemana>();
   for (const r of reservas) {
     map.set(r.slot_id, r);
@@ -311,7 +322,6 @@ export function applyEffectiveStatus(
   }));
 }
 
-
 export async function bookSlotBlock(
   ids: string[],
   pedidoId: string,
@@ -349,7 +359,10 @@ export async function bookSlotBlock(
   const { error } = await supabase.from("reservas_semana").insert(rows);
 
   if (error) {
-    if (isMissingTableError(error.code, error.message) && allowReservasLocalFallback()) {
+    if (
+      isMissingTableError(error.code, error.message) &&
+      allowReservasLocalFallback()
+    ) {
       reservasUseLocalFallback = true;
       return insertLocalReservas(rows);
     }
@@ -360,7 +373,9 @@ export async function bookSlotBlock(
   return true;
 }
 
-export async function rollbackReservasForPedido(pedidoId: string): Promise<void> {
+export async function rollbackReservasForPedido(
+  pedidoId: string,
+): Promise<void> {
   if (reservasUseLocalFallback) {
     deleteLocalReservasForPedido(pedidoId);
     return;
@@ -370,7 +385,10 @@ export async function rollbackReservasForPedido(pedidoId: string): Promise<void>
     .delete()
     .eq("pedido_id", pedidoId);
   if (error) {
-    if (isMissingTableError(error.code, error.message) && allowReservasLocalFallback()) {
+    if (
+      isMissingTableError(error.code, error.message) &&
+      allowReservasLocalFallback()
+    ) {
       reservasUseLocalFallback = true;
       deleteLocalReservasForPedido(pedidoId);
       return;
@@ -383,12 +401,10 @@ export async function rollbackReservasForPedido(pedidoId: string): Promise<void>
  * Remove reservas `ativa` ligadas a pedidos inexistentes, finalizados ou arquivados.
  * Corrige agenda vermelha sem contrato pendente/ativo no painel.
  */
-export async function repairOrphanReservas(
-  localContext?: {
-    validPedidoIds: Iterable<string>;
-    closedPedidoIds: Iterable<string>;
-  },
-): Promise<number> {
+export async function repairOrphanReservas(localContext?: {
+  validPedidoIds: Iterable<string>;
+  closedPedidoIds: Iterable<string>;
+}): Promise<number> {
   if (reservasUseLocalFallback) {
     if (!localContext) return 0;
     const valid = new Set(localContext.validPedidoIds);
@@ -490,7 +506,9 @@ export async function bookSlotsBySchedule(
 
   const allSlots = await fetchAgenda();
   const reservas = await fetchReservasForWeek(semanaInicio);
-  const reservaMap = buildReservaMap(reservas.filter((r) => r.status === "ativa"));
+  const reservaMap = buildReservaMap(
+    reservas.filter((r) => r.status === "ativa"),
+  );
   const templateMap = new Map(allSlots.map((s) => [s.id, s]));
 
   const ids = allSlots

@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { X, MessageCircle, Calendar, ChevronLeft, Loader2, Copy } from "lucide-react";
+import {
+  X,
+  MessageCircle,
+  Calendar,
+  ChevronLeft,
+  Loader2,
+  Copy,
+} from "lucide-react";
 import { createStaticPix, hasError } from "pix-utils";
 import type { Pkg } from "./Pricing";
 import { AgendaGrid } from "@/components/agenda/AgendaGrid";
@@ -112,7 +119,13 @@ function buildWhatsAppMessage(params: {
     Formulário enviado via https://ferreiraservice.vercel.app/ `;
 }
 
-export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: () => void }) {
+export function OnboardingModal({
+  pkg,
+  onClose,
+}: {
+  pkg: Pkg | null;
+  onClose: () => void;
+}) {
   const [nome, setNome] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [discord, setDiscord] = useState("");
@@ -128,15 +141,16 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [honeypot, setHoneypot] = useState("");
   const turnstileRequired = isTurnstileSiteKeyConfigured();
-  const [backendStatus, setBackendStatus] = useState<PedidosBackendStatus | null>(
-    null,
-  );
+  const [backendStatus, setBackendStatus] =
+    useState<PedidosBackendStatus | null>(null);
   const [backendChecking, setBackendChecking] = useState(false);
   const [pixBrCode, setPixBrCode] = useState<string | null>(null);
   const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
   const [copyCopied, setCopyCopied] = useState(false);
   const [pixGenFailed, setPixGenFailed] = useState(false);
-  const pendingOrderRef = useRef<{ id: string; claimToken: string } | null>(null);
+  const pendingOrderRef = useRef<{ id: string; claimToken: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (pkg) {
@@ -252,7 +266,10 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
     const semanaInicio = getWeekStart();
     const { dias, horarios } = agendaFromBlock(selectedBlock);
     const slotIds = selectedBlock.map((s) => s.id);
-    const parsedLevel = Math.max(1, parseInt(level.replace(/\D/g, ""), 10) || 1);
+    const parsedLevel = Math.max(
+      1,
+      parseInt(level.replace(/\D/g, ""), 10) || 1,
+    );
     const clientName = nome.trim() || char.trim();
 
     const orderResult = await clientsStore.createOrder({
@@ -285,7 +302,7 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
         setBackendStatus({
           status: "setup",
           message:
-            'Backend indisponível. Execute supabase/setup.sql e supabase/migrations/security_phase1_rls.sql no Supabase.',
+            "Backend indisponível. Execute supabase/setup.sql e supabase/migrations/security_phase1_rls.sql no Supabase.",
         });
       }
       return;
@@ -375,15 +392,19 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
           <X className="h-4 w-4" />
         </button>
 
-        <div
-          className={`shrink-0 pr-8 ${isScheduleStep ? "sm:pr-0" : ""}`}
-        >
+        <div className={`shrink-0 pr-8 ${isScheduleStep ? "sm:pr-0" : ""}`}>
           <div className="text-[10px] tracking-[0.22em] text-primary">
-            {step === 0 ? "ONBOARDING" : step === 1 ? "AGENDAMENTO" : "PAGAMENTO"}
+            {step === 0
+              ? "ONBOARDING"
+              : step === 1
+                ? "AGENDAMENTO"
+                : "PAGAMENTO"}
           </div>
           <h3
             className={`mt-1 font-semibold text-white ${
-              isScheduleStep ? "text-lg leading-snug sm:mt-1.5 sm:text-xl" : "mt-1.5 text-xl"
+              isScheduleStep
+                ? "text-lg leading-snug sm:mt-1.5 sm:text-xl"
+                : "mt-1.5 text-xl"
             }`}
           >
             {pkg.name}
@@ -399,11 +420,11 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               isScheduleStep ? "mt-2 sm:mt-4" : "mt-4"
             }`}
           >
-          <StepDot active={step === 0} done={step > 0} label="Dados" />
-          <div className="flex-1 h-px bg-white/10" />
-          <StepDot active={step === 1} done={step > 1} label="Horário" />
-          <div className="flex-1 h-px bg-white/10" />
-          <StepDot active={step === 2} done={false} label="Pagamento" />
+            <StepDot active={step === 0} done={step > 0} label="Dados" />
+            <div className="flex-1 h-px bg-white/10" />
+            <StepDot active={step === 1} done={step > 1} label="Horário" />
+            <div className="flex-1 h-px bg-white/10" />
+            <StepDot active={step === 2} done={false} label="Pagamento" />
           </div>
         </div>
 
@@ -488,15 +509,15 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain -mx-1 px-1 pb-2">
               <p className="text-xs text-white/50 mb-3">
                 <span className="md:hidden">
-                  Escolha o dia na faixa e toque no horário de início da operação de{" "}
+                  Escolha o dia na faixa e toque no horário de início da
+                  operação de{" "}
                   <span className="text-white font-medium">{duracao}h</span>.
                 </span>
                 <span className="hidden md:inline">
-                  Clique num bloco{" "}
-                  <span className="text-cyan-400">verde</span> para selecionar o início
-                  da sua operação de{" "}
-                  <span className="text-white font-medium">{duracao}h</span>. O bloco
-                  completo será destacado automaticamente.
+                  Clique num bloco <span className="text-cyan-400">verde</span>{" "}
+                  para selecionar o início da sua operação de{" "}
+                  <span className="text-white font-medium">{duracao}h</span>. O
+                  bloco completo será destacado automaticamente.
                 </span>
               </p>
 
@@ -511,30 +532,38 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               />
 
               {backendChecking && (
-                <p className="mt-3 text-xs text-white/45">Verificando conexão com o sistema…</p>
-              )}
-              {confirmError === "backend" && backendStatus && backendStatus.status !== "ready" && (
-                <p className="mt-3 text-xs text-amber-400">
-                  Pedido indisponível no momento: {backendStatus.message} O operador precisa
-                  corrigir o banco antes de novos agendamentos aparecerem no painel.
+                <p className="mt-3 text-xs text-white/45">
+                  Verificando conexão com o sistema…
                 </p>
               )}
+              {confirmError === "backend" &&
+                backendStatus &&
+                backendStatus.status !== "ready" && (
+                  <p className="mt-3 text-xs text-amber-400">
+                    Pedido indisponível no momento: {backendStatus.message} O
+                    operador precisa corrigir o banco antes de novos
+                    agendamentos aparecerem no painel.
+                  </p>
+                )}
               {confirmError === "setup" && (
                 <p className="mt-3 text-xs text-amber-400">
                   Banco de pedidos não configurado. Execute{" "}
                   <code className="text-amber-200">npm run db:setup</code> ou{" "}
-                  <code className="text-amber-200">supabase/setup.sql</code> no dashboard do
-                  Supabase — sem isso o pedido não aparece em Contratos Ativos.
+                  <code className="text-amber-200">supabase/setup.sql</code> no
+                  dashboard do Supabase — sem isso o pedido não aparece em
+                  Contratos Ativos.
                 </p>
               )}
               {confirmError === "slot" && (
                 <p className="mt-3 text-xs text-red-400">
-                  Um ou mais horários desse bloco acabaram de ser reservados. Selecione outro.
+                  Um ou mais horários desse bloco acabaram de ser reservados.
+                  Selecione outro.
                 </p>
               )}
               {confirmError === "order" && (
                 <p className="mt-3 text-xs text-red-400">
-                  Não foi possível registrar o pedido. Verifique sua conexão e tente novamente.
+                  Não foi possível registrar o pedido. Verifique sua conexão e
+                  tente novamente.
                 </p>
               )}
               {confirmError === "captcha" && (
@@ -544,7 +573,8 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
               )}
               {confirmError === "rate_limit" && (
                 <p className="mt-3 text-xs text-amber-400">
-                  Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.
+                  Muitas tentativas em pouco tempo. Aguarde alguns minutos e
+                  tente novamente.
                 </p>
               )}
 
@@ -554,22 +584,24 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
                 onError={() => setTurnstileToken(null)}
               />
 
-              {selectedBlock && selectedBlock.length > 0 && (() => {
-                const startH = selectedBlock[0].hora_inicio;
-                const endH = startH + selectedBlock.length;
-                const dia = selectedBlock[0].dia_da_semana;
-                return (
-                  <p className="mt-3 text-xs text-cyan-300">
-                    Selecionado:{" "}
-                    <span className="font-semibold">
-                      {DIAS_FULL_LABELS[dia] ?? dia}{" "}
-                      das {String(startH).padStart(2, "0")}:00{" "}
-                      às {String(endH).padStart(2, "0")}:00{" "}
-                      ({selectedBlock.length}h)
-                    </span>
-                  </p>
-                );
-              })()}
+              {selectedBlock &&
+                selectedBlock.length > 0 &&
+                (() => {
+                  const startH = selectedBlock[0].hora_inicio;
+                  const endH = startH + selectedBlock.length;
+                  const dia = selectedBlock[0].dia_da_semana;
+                  return (
+                    <p className="mt-3 text-xs text-cyan-300">
+                      Selecionado:{" "}
+                      <span className="font-semibold">
+                        {DIAS_FULL_LABELS[dia] ?? dia} das{" "}
+                        {String(startH).padStart(2, "0")}:00 às{" "}
+                        {String(endH).padStart(2, "0")}:00 (
+                        {selectedBlock.length}h)
+                      </span>
+                    </p>
+                  );
+                })()}
             </div>
 
             <div className="shrink-0 flex gap-3 border-t border-white/10 bg-[#0a0a0c]/95 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:border-white/5 sm:bg-transparent sm:pt-4">
@@ -607,16 +639,21 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
         )}
 
         {step === 2 && (
-          <div className="mt-6 space-y-4" style={{ animation: "fade-up 0.25s ease-out" }}>
+          <div
+            className="mt-6 space-y-4"
+            style={{ animation: "fade-up 0.25s ease-out" }}
+          >
             <div className="text-center">
               <p className="text-xs text-white/50">Valor total da operação</p>
-              <p className="mt-1 text-3xl font-semibold text-white">{pkg.price}</p>
+              <p className="mt-1 text-3xl font-semibold text-white">
+                {pkg.price}
+              </p>
             </div>
 
             {pixGenFailed ? (
               <p className="text-xs text-red-400 text-center">
-                Não foi possível gerar o código Pix automaticamente. Entre em contato pelo
-                WhatsApp para receber os dados de pagamento.
+                Não foi possível gerar o código Pix automaticamente. Entre em
+                contato pelo WhatsApp para receber os dados de pagamento.
               </p>
             ) : (
               <>
@@ -645,8 +682,8 @@ export function OnboardingModal({ pkg, onClose }: { pkg: Pkg | null; onClose: ()
             )}
 
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
-              Após realizar o pagamento no app do seu banco, clique no botão abaixo para
-              enviar o comprovante pelo WhatsApp.
+              Após realizar o pagamento no app do seu banco, clique no botão
+              abaixo para enviar o comprovante pelo WhatsApp.
             </div>
 
             <button
@@ -715,7 +752,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-[10px] tracking-[0.18em] text-white/50">{label}</span>
+      <span className="text-[10px] tracking-[0.18em] text-white/50">
+        {label}
+      </span>
       <input
         required={required}
         type="text"

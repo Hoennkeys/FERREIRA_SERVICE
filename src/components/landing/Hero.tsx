@@ -3,7 +3,10 @@ import { Reveal } from "./Reveal";
 
 export function Hero() {
   return (
-    <section id="top" className="relative pt-28 pb-20 sm:pt-36 sm:pb-28 overflow-hidden">
+    <section
+      id="top"
+      className="relative pt-28 pb-20 sm:pt-36 sm:pb-28 overflow-hidden"
+    >
       {/* Background grid + glow */}
       <div
         aria-hidden
@@ -12,13 +15,17 @@ export function Hero() {
           backgroundImage:
             "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
-          maskImage: "radial-gradient(ellipse at 50% 0%, black 40%, transparent 75%)",
+          maskImage:
+            "radial-gradient(ellipse at 50% 0%, black 40%, transparent 75%)",
         }}
       />
       <div
         aria-hidden
         className="absolute left-1/2 top-0 -z-10 h-[500px] w-[800px] -translate-x-1/2 rounded-full blur-3xl"
-        style={{ background: "radial-gradient(circle, rgba(0,149,255,0.25), transparent 60%)" }}
+        style={{
+          background:
+            "radial-gradient(circle, rgba(0,149,255,0.25), transparent 60%)",
+        }}
       />
 
       <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center">
@@ -40,8 +47,10 @@ export function Hero() {
 
         <Reveal delay={160}>
           <p className="mx-auto mt-6 max-w-2xl text-balance text-sm sm:text-base text-white/60 leading-relaxed">
-            Todos os serviços de alta performance são oferecidos pela "Ferreira na Voz". Subimos o nível,
-            as conquistas e o rendimento da sua conta em qualquer servidor de Tibia com segurança, rastreamento ativo e referência maxima no mercado.
+            Todos os serviços de alta performance são oferecidos pela "Ferreira
+            na Voz". Subimos o nível, as conquistas e o rendimento da sua conta
+            em qualquer servidor de Tibia com segurança, rastreamento ativo e
+            referência maxima no mercado.
           </p>
         </Reveal>
 

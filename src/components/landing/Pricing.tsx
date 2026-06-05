@@ -18,21 +18,33 @@ const packages: Pkg[] = [
     name: "Pacote Starter",
     hours: "1h",
     price: "R$ 18,00",
-    features: ["Sessão de Arranque Rápido", "Monitoramento Ativo", "Finalização de Hunt"],
+    features: [
+      "Sessão de Arranque Rápido",
+      "Monitoramento Ativo",
+      "Finalização de Hunt",
+    ],
   },
   {
     id: "standard",
     name: "Pacote Standard",
     hours: "3h",
     price: "R$ 50,00",
-    features: ["Sessão contínua", "Planejamento e Otimização", "Relatório Detalhado da Hunt"],
+    features: [
+      "Sessão contínua",
+      "Planejamento e Otimização",
+      "Relatório Detalhado da Hunt",
+    ],
   },
   {
     id: "advanced",
     name: "Pacote Advanced",
     hours: "7h",
     price: "R$ 105,00",
-    features: ["Melhor custo-benefício", "Ciclo de Hunt Completo", "Prioridade na fila"],
+    features: [
+      "Melhor custo-benefício",
+      "Ciclo de Hunt Completo",
+      "Prioridade na fila",
+    ],
     featured: true,
   },
   {
@@ -40,7 +52,11 @@ const packages: Pkg[] = [
     name: "Pacote Pro Max",
     hours: "10h",
     price: "R$ 145,00",
-    features: ["Operação Estendida de Alta Performance", "Suporte e Cobertura Premium", "Operação Dedicada ao Seu Personagem"],
+    features: [
+      "Operação Estendida de Alta Performance",
+      "Suporte e Cobertura Premium",
+      "Operação Dedicada ao Seu Personagem",
+    ],
   },
 ];
 
@@ -79,12 +95,12 @@ export function Pricing() {
                     MAIS VENDIDO
                   </span>
                 )}
-                
+
                 {/* HORAS GIGANTES EM DESTAQUE */}
                 <div className="text-5xl sm:text-6xl font-bold tracking-tight text-primary">
                   {p.hours}
                 </div>
-                
+
                 {/* NOME DO PACOTE DISCRETO */}
                 <div className="mt-1 text-xs tracking-wider text-white/40 font-medium">
                   {p.name}
@@ -92,11 +108,16 @@ export function Pricing() {
 
                 <div className="mt-4 text-3xl font-semibold text-white">
                   {p.price.split(",")[0]}
-                  <span className="text-base text-white/40">,{p.price.split(",")[1]}</span>
+                  <span className="text-base text-white/40">
+                    ,{p.price.split(",")[1]}
+                  </span>
                 </div>
                 <ul className="mt-5 space-y-2 flex-1">
                   {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-white/65">
+                    <li
+                      key={f}
+                      className="flex items-start gap-2 text-xs text-white/65"
+                    >
                       <Check className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                       {f}
                     </li>
