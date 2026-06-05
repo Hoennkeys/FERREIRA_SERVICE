@@ -204,7 +204,8 @@ begin
 end;
 $$;
 revoke all on function public.assert_homepage_pedido_rate(text) from public;
-grant execute on function public.assert_homepage_pedido_rate(text) to anon, authenticated;
+revoke all on function public.assert_homepage_pedido_rate(text) from anon;
+revoke all on function public.assert_homepage_pedido_rate(text) from authenticated;
 
 create or replace function public.create_pedido_homepage(
   p_nome text, p_whatsapp text, p_discord text, p_char_nome text,
@@ -249,6 +250,13 @@ as $$
 declare v_deleted int;
 begin
   if p_id is null or p_claim_token is null then return false; end if;
+  if not exists (
+    select 1 from public.pedidos_cliente
+    where id = p_id and claim_token = p_claim_token
+      and origem = 'homepage' and status = 'Pendente'
+  ) then
+    return false;
+  end if;
   delete from reservas_semana where pedido_id = p_id;
   delete from pedidos_cliente
   where id = p_id and claim_token = p_claim_token

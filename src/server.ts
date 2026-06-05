@@ -1,6 +1,7 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
+import { safeError } from "./lib/safe-log";
 import { renderErrorPage } from "./lib/error-page";
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -50,7 +51,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  safeError("server", consumeLastCapturedError() ?? new Error("h3 swallowed SSR error"));
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -66,7 +67,7 @@ export default {
         await normalizeCatastrophicSsrResponse(response),
       );
     } catch (error) {
-      console.error(error);
+      safeError("server", error);
       return withSecurityHeaders(
         new Response(renderErrorPage(), {
           status: 500,

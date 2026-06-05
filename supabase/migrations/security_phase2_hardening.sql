@@ -89,7 +89,8 @@ end;
 $$;
 
 revoke all on function public.assert_homepage_pedido_rate(text) from public;
-grant execute on function public.assert_homepage_pedido_rate(text) to anon, authenticated;
+revoke all on function public.assert_homepage_pedido_rate(text) from anon;
+revoke all on function public.assert_homepage_pedido_rate(text) from authenticated;
 
 -- Limpeza periódica (opcional manual / cron Supabase)
 create or replace function public.prune_homepage_rate_events()

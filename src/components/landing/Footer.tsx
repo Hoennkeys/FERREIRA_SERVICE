@@ -18,7 +18,12 @@ export function Footer() {
             Ferreira na Voz <span className="text-white/25">//</span> Linha de Comando Tática ©{" "}
             {new Date().getFullYear()}
           </Link>
-          <span>Operações com segurança. Zero compartilhamento de dados.</span>
+          <Link
+            to="/privacidade"
+            className="transition hover:text-white/55"
+          >
+            Política de Privacidade
+          </Link>
         </div>
       </div>
     </footer>

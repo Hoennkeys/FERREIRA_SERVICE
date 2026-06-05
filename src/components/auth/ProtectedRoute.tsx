@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "@tanstack/react-router";
 import type { Session } from "@supabase/supabase-js";
 
-import { isCurrentUserAdmin } from "@/lib/auth";
+import { isCurrentUserAdmin, signOutAndClearSession } from "@/lib/auth";
 import { sanitizeRedirectPath } from "@/lib/safe-redirect";
 import { supabase } from "@/lib/supabase";
 
@@ -31,7 +31,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       const allowed = await isCurrentUserAdmin();
       if (!mounted) return;
       if (!allowed) {
-        await supabase.auth.signOut();
+        await signOutAndClearSession();
         setSession(null);
         setAdminOk(false);
       } else {
