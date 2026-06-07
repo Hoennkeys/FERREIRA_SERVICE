@@ -21,7 +21,11 @@ function formatUptime(totalSeconds: number): string {
 
 type TimerSession = Pick<
   LiveServiceSession,
-  "is_active" | "is_paused" | "started_at" | "accumulated_seconds" | "base_xp_hour"
+  | "is_active"
+  | "is_paused"
+  | "started_at"
+  | "accumulated_seconds"
+  | "base_xp_hour"
 >;
 
 function compute(session: TimerSession): TelemetryTick {

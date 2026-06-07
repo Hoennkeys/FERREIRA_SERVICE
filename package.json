@@ -11,6 +11,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "db:setup": "node scripts/apply-supabase-setup.mjs",
     "twitch:check": "node scripts/check-twitch-live.mjs",
@@ -92,6 +93,6 @@
     "prettier": "^3.7.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.1",
-    "vite": "^7.3.1"
+    "vite": "^8.0.0"
   }
 }

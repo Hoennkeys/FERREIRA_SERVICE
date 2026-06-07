@@ -51,7 +51,6 @@ export function About() {
     <section id="sobre" className="py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-
           <div className="lg:col-span-5">
             <Reveal>
               <span className="text-[10px] font-medium tracking-[0.22em] text-white/40">
@@ -71,26 +70,29 @@ export function About() {
 
             <Reveal delay={160}>
               <p className="mt-6 text-sm text-white/65 leading-relaxed">
-                Eu sou o Ferreira e tenho mais de 15 mil horas
-                dentro do Tibia — das versões 7.4, 8.1, 8.6, 10, 15 e Global. Não aprendi o jogo
-                em teoria: vivi cada meta, cada reset e cada risco de hunt na prática, e foi
-                isso que me levou a transformar essa experiência em service de verdade.
+                Eu sou o Ferreira e tenho mais de 15 mil horas dentro do Tibia —
+                das versões 7.4, 8.1, 8.6, 10, 15 e Global. Não aprendi o jogo
+                em teoria: vivi cada meta, cada reset e cada risco de hunt na
+                prática, e foi isso que me levou a transformar essa experiência
+                em service de verdade.
               </p>
             </Reveal>
 
             <Reveal delay={220}>
               <p className="mt-4 text-sm text-white/65 leading-relaxed">
-                Sei o valor do tempo que você investiu no seu boneco, por isso trato cada sessão
-                de service como se fosse na minha própria conta — com cuidado, atenção e zero
-                improviso. Segurança não é promessa de marketing aqui; é o jeito que eu opero
-                quando alguém confia o personagem nas minhas mãos.
+                Sei o valor do tempo que você investiu no seu boneco, por isso
+                trato cada sessão de service como se fosse na minha própria
+                conta — com cuidado, atenção e zero improviso. Segurança não é
+                promessa de marketing aqui; é o jeito que eu opero quando alguém
+                confia o personagem nas minhas mãos.
               </p>
             </Reveal>
 
             <Reveal delay={280}>
               <p className="mt-4 text-sm text-white/65 leading-relaxed">
-                Atendimento direto, sem intermediários. Do onboarding via WhatsApp à conclusão da
-                missão, você tem acesso total à linha de comando da operação.
+                Atendimento direto, sem intermediários. Do onboarding via
+                WhatsApp à conclusão da missão, você tem acesso total à linha de
+                comando da operação.
               </p>
             </Reveal>
           </div>
@@ -142,57 +144,70 @@ export function About() {
               </p>
 
               <div className="space-y-2.5">
-                {SOCIALS.map(({ id, label, href, icon: Icon, color, handle }) => {
-                  const isTwitch = id === "twitch";
-                  const liveTwitchHighlight = showLive && isTwitch;
+                {SOCIALS.map(
+                  ({ id, label, href, icon: Icon, color, handle }) => {
+                    const isTwitch = id === "twitch";
+                    const liveTwitchHighlight = showLive && isTwitch;
 
-                  return (
-                    <a
-                      key={id}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`group flex items-center gap-3.5 w-full rounded-xl border px-4 py-3 transition-all duration-200 hover:border-white/20 ${
-                        liveTwitchHighlight
-                          ? "border-emerald-500/50 animate-pulse shadow-[0_0_24px_rgba(16,185,129,0.25)]"
-                          : "border-white/10"
-                      }`}
-                      style={{
-                        backgroundColor: `color-mix(in srgb, ${color} 5%, transparent)`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (liveTwitchHighlight) return;
-                        (e.currentTarget as HTMLElement).style.borderColor = `color-mix(in srgb, ${color} 30%, transparent)`;
-                        (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px color-mix(in srgb, ${color} 12%, transparent)`;
-                      }}
-                      onMouseLeave={(e) => {
-                        if (liveTwitchHighlight) return;
-                        (e.currentTarget as HTMLElement).style.borderColor = "";
-                        (e.currentTarget as HTMLElement).style.boxShadow = "";
-                      }}
-                    >
-                      <Icon
-                        className="h-4 w-4 shrink-0 text-white/50 transition group-hover:text-white/80"
-                        style={{ color: `color-mix(in srgb, ${color} 70%, white)` }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-white/80 group-hover:text-white transition">
-                          {label}
-                        </div>
-                        <div className="text-[10px] text-white/35 truncate">{handle}</div>
-                      </div>
-                      <svg
-                        className="h-3 w-3 text-white/20 group-hover:text-white/50 transition group-hover:translate-x-0.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
+                    return (
+                      <a
+                        key={id}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`group flex items-center gap-3.5 w-full rounded-xl border px-4 py-3 transition-all duration-200 hover:border-white/20 ${
+                          liveTwitchHighlight
+                            ? "border-emerald-500/50 animate-pulse shadow-[0_0_24px_rgba(16,185,129,0.25)]"
+                            : "border-white/10"
+                        }`}
+                        style={{
+                          backgroundColor: `color-mix(in srgb, ${color} 5%, transparent)`,
+                        }}
+                        onMouseEnter={(e) => {
+                          if (liveTwitchHighlight) return;
+                          (e.currentTarget as HTMLElement).style.borderColor =
+                            `color-mix(in srgb, ${color} 30%, transparent)`;
+                          (e.currentTarget as HTMLElement).style.boxShadow =
+                            `0 0 20px color-mix(in srgb, ${color} 12%, transparent)`;
+                        }}
+                        onMouseLeave={(e) => {
+                          if (liveTwitchHighlight) return;
+                          (e.currentTarget as HTMLElement).style.borderColor =
+                            "";
+                          (e.currentTarget as HTMLElement).style.boxShadow = "";
+                        }}
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </a>
-                  );
-                })}
+                        <Icon
+                          className="h-4 w-4 shrink-0 text-white/50 transition group-hover:text-white/80"
+                          style={{
+                            color: `color-mix(in srgb, ${color} 70%, white)`,
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-white/80 group-hover:text-white transition">
+                            {label}
+                          </div>
+                          <div className="text-[10px] text-white/35 truncate">
+                            {handle}
+                          </div>
+                        </div>
+                        <svg
+                          className="h-3 w-3 text-white/20 group-hover:text-white/50 transition group-hover:translate-x-0.5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </a>
+                    );
+                  },
+                )}
               </div>
 
               <p className="mt-5 text-[10px] text-white/25 text-center tracking-wide">
@@ -200,7 +215,6 @@ export function About() {
               </p>
             </div>
           </Reveal>
-
         </div>
       </div>
     </section>

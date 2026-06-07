@@ -8,11 +8,11 @@ Referências: [`SECURITY.md`](SECURITY.md), [`MONITORING.md`](MONITORING.md), [`
 
 ## Registro
 
-| Campo | Valor |
-|-------|--------|
-| **Data** | _AAAA-MM-DD_ |
-| **Responsável** | _nome_ |
-| **Próxima revisão** | _+3 meses_ |
+| Campo                               | Valor                |
+| ----------------------------------- | -------------------- |
+| **Data**                            | _AAAA-MM-DD_         |
+| **Responsável**                     | _nome_               |
+| **Próxima revisão**                 | _+3 meses_           |
 | **Incidentes desde última revisão** | _nenhum / descrever_ |
 
 ---
@@ -100,6 +100,6 @@ rg "VITE_.*SECRET|VITE_.*SERVICE_ROLE|service_role" --glob "!node_modules"
 
 ## Histórico (opcional)
 
-| Data | Responsável | Resumo |
-|------|-------------|--------|
-| _—_ | _—_ | Primeira revisão após Fase 3 |
+| Data | Responsável | Resumo                       |
+| ---- | ----------- | ---------------------------- |
+| _—_  | _—_         | Primeira revisão após Fase 3 |

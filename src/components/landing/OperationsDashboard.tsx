@@ -10,7 +10,11 @@ import { useTelemetryTimer } from "@/hooks/use-telemetry-timer";
 import { TWITCH_URL } from "@/lib/twitch";
 import { Reveal } from "./Reveal";
 
-export function OperationsDashboard({ embedded = false }: { embedded?: boolean }) {
+export function OperationsDashboard({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const session = useLiveSession();
   const { uptime, xpFormatted } = useTelemetryTimer(session);
 
@@ -176,7 +180,11 @@ export function OperationsDashboard({ embedded = false }: { embedded?: boolean }
                   {formatDuration(
                     session.last_session_summary.total_time_seconds,
                   )}{" "}
-                  · {session.last_session_summary.total_xp_gained.toLocaleString("pt-BR")} XP
+                  ·{" "}
+                  {session.last_session_summary.total_xp_gained.toLocaleString(
+                    "pt-BR",
+                  )}{" "}
+                  XP
                 </p>
               )}
             </div>
@@ -222,7 +230,9 @@ const Stat = memo(function Stat({
       <div className="text-[10px] tracking-[0.18em] text-white/40">{label}</div>
       <div
         className={`mt-2 text-xl sm:text-2xl font-semibold ${
-          accent ? "text-primary drop-shadow-[0_0_12px_rgba(0,149,255,0.5)]" : "text-white"
+          accent
+            ? "text-primary drop-shadow-[0_0_12px_rgba(0,149,255,0.5)]"
+            : "text-white"
         } ${mono ? "font-mono tabular-nums" : ""}`}
       >
         {value}

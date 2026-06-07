@@ -58,22 +58,33 @@ export function AgendaTab() {
           <p className="text-[11px] font-medium text-white/60">Como usar:</p>
           <ul className="list-none space-y-1 text-[11px] leading-relaxed text-white/45">
             <li>
-              <span className="font-medium text-cyan-400">Slot individual</span> — clique
-              diretamente no quadrado para alternar disponível ↔ bloqueado.
+              <span className="font-medium text-cyan-400">Slot individual</span>{" "}
+              — clique diretamente no quadrado para alternar disponível ↔
+              bloqueado.
             </li>
             <li>
-              <span className="font-medium text-primary">Coluna inteira (dia)</span> — clique
-              no <span className="font-semibold text-white/60">nome do dia</span> no topo
-              (SEG, TER…) para bloquear ou liberar todos os horários daquele dia de uma vez.
+              <span className="font-medium text-primary">
+                Coluna inteira (dia)
+              </span>{" "}
+              — clique no{" "}
+              <span className="font-semibold text-white/60">nome do dia</span>{" "}
+              no topo (SEG, TER…) para bloquear ou liberar todos os horários
+              daquele dia de uma vez.
             </li>
             <li>
-              <span className="font-medium text-primary">Linha inteira (hora)</span> — clique
-              no <span className="font-semibold text-white/60">horário lateral</span> (07h,
-              08h…) para bloquear ou liberar aquele horário em todos os dias da semana.
+              <span className="font-medium text-primary">
+                Linha inteira (hora)
+              </span>{" "}
+              — clique no{" "}
+              <span className="font-semibold text-white/60">
+                horário lateral
+              </span>{" "}
+              (07h, 08h…) para bloquear ou liberar aquele horário em todos os
+              dias da semana.
             </li>
             <li>
-              Slots <span className="font-medium text-red-400">vermelhos</span> já foram
-              agendados e não podem ser alterados.
+              Slots <span className="font-medium text-red-400">vermelhos</span>{" "}
+              já foram agendados e não podem ser alterados.
             </li>
           </ul>
         </div>

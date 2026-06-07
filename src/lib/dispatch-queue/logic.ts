@@ -19,8 +19,7 @@ function rotateToEnd(groups: WhatsAppGroup[], id: string): WhatsAppGroup[] {
 /** True when every group has completed the full protocol (flyer + text). */
 function isRoundComplete(groups: WhatsAppGroup[]): boolean {
   return (
-    groups.length > 0 &&
-    groups.every((g) => g.flyer_clicked && g.text_clicked)
+    groups.length > 0 && groups.every((g) => g.flyer_clicked && g.text_clicked)
   );
 }
 
@@ -69,7 +68,9 @@ export function applyClick(
   }
 
   if (isRoundComplete(groups)) {
-    const endsAt = new Date(now + state.cooldown_minutes * 60_000).toISOString();
+    const endsAt = new Date(
+      now + state.cooldown_minutes * 60_000,
+    ).toISOString();
     const reset = normalizeOrder(
       groups.map((g) => ({ ...g, flyer_clicked: false, text_clicked: false })),
     );

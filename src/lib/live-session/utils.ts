@@ -32,6 +32,9 @@ export function getElapsedSeconds(
   return Math.floor(getElapsedMs(session, now) / 1000);
 }
 
-export function computeXpFromElapsed(elapsedMs: number, baseXpHour: number): number {
+export function computeXpFromElapsed(
+  elapsedMs: number,
+  baseXpHour: number,
+): number {
   return Math.floor((elapsedMs / 3_600_000) * baseXpHour);
 }

@@ -7,12 +7,12 @@ Inclui hardening pós-feedback (sem depender de domínio Cloudflare).
 
 ## Resumo executivo
 
-| Camada | Proteção |
-|--------|----------|
-| **Browser** | Headers Vercel + `server.ts`, CSP report-only, redirect seguro |
+| Camada           | Proteção                                                                     |
+| ---------------- | ---------------------------------------------------------------------------- |
+| **Browser**      | Headers Vercel + `server.ts`, CSP report-only, redirect seguro               |
 | **App (Vercel)** | Rate limit server fn, CSRF em server functions, honeypot, Turnstile opcional |
-| **Painel** | `requireAdmin` + `check_is_admin` + RLS `is_admin()` |
-| **Postgres** | Rate limit na RPC `create_pedido_homepage` (não contorna pelo site) |
+| **Painel**       | `requireAdmin` + `check_is_admin` + RLS `is_admin()`                         |
+| **Postgres**     | Rate limit na RPC `create_pedido_homepage` (não contorna pelo site)          |
 
 ---
 
@@ -27,15 +27,15 @@ Inclui hardening pós-feedback (sem depender de domínio Cloudflare).
 
 ### Depois
 
-| Item | Correção |
-|------|----------|
-| Turnstile ausente | Pedidos **permitidos** com rate limit app (3/30min/IP) + DB (3/h/WhatsApp, 40/h global, máx. 2 pendentes/WhatsApp) |
-| RPC spam | `assert_homepage_pedido_rate` dentro de `create_pedido_homepage` |
-| Painel | `requireAdmin` + RPC `check_is_admin` |
-| Sessão live / fila dispatch | RLS só `is_admin()` (migration) |
-| CSRF | `createCsrfMiddleware` em server functions |
-| Honeypot | Campo `website` oculto no formulário |
-| Testes | `npm run test:security` |
+| Item                        | Correção                                                                                                           |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Turnstile ausente           | Pedidos **permitidos** com rate limit app (3/30min/IP) + DB (3/h/WhatsApp, 40/h global, máx. 2 pendentes/WhatsApp) |
+| RPC spam                    | `assert_homepage_pedido_rate` dentro de `create_pedido_homepage`                                                   |
+| Painel                      | `requireAdmin` + RPC `check_is_admin`                                                                              |
+| Sessão live / fila dispatch | RLS só `is_admin()` (migration)                                                                                    |
+| CSRF                        | `createCsrfMiddleware` em server functions                                                                         |
+| Honeypot                    | Campo `website` oculto no formulário                                                                               |
+| Testes                      | `npm run test:security`                                                                                            |
 
 ---
 
@@ -65,12 +65,12 @@ Supabase → Authentication → usuário admin → ativar TOTP.
 
 ## Limites ainda possíveis (realista)
 
-| Vetor | Mitigação atual | Ideal futuro |
-|-------|-----------------|--------------|
-| RPC direta com anon key | Limites por WhatsApp + global no DB | Edge Function + IP |
-| Rate limit em memória (serverless) | Por instância Vercel | Redis / Upstash |
-| PIX no bundle client | Dado público (chave telefone) | Server fn opcional |
-| CSP report-only | Não bloqueia XSS ainda | Enforce após validar |
+| Vetor                              | Mitigação atual                     | Ideal futuro         |
+| ---------------------------------- | ----------------------------------- | -------------------- |
+| RPC direta com anon key            | Limites por WhatsApp + global no DB | Edge Function + IP   |
+| Rate limit em memória (serverless) | Por instância Vercel                | Redis / Upstash      |
+| PIX no bundle client               | Dado público (chave telefone)       | Server fn opcional   |
+| CSP report-only                    | Não bloqueia XSS ainda              | Enforce após validar |
 
 ---
 

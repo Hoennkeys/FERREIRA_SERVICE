@@ -55,7 +55,11 @@ export function AgendaAdmin() {
         </div>
 
         <div className="text-white/30 group-hover:text-white/60 transition">
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {open ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
         </div>
       </button>
 
@@ -69,22 +73,36 @@ export function AgendaAdmin() {
             <p className="text-[11px] text-white/60 font-medium">Como usar:</p>
             <ul className="text-[11px] text-white/45 leading-relaxed space-y-1 list-none">
               <li>
-                <span className="text-cyan-400 font-medium">Slot individual</span> — clique
-                diretamente no quadrado para alternar disponível ↔ bloqueado.
+                <span className="text-cyan-400 font-medium">
+                  Slot individual
+                </span>{" "}
+                — clique diretamente no quadrado para alternar disponível ↔
+                bloqueado.
               </li>
               <li>
-                <span className="text-primary font-medium">Coluna inteira (dia)</span> — clique
-                no <span className="font-semibold text-white/60">nome do dia</span> no topo
-                (SEG, TER…) para bloquear ou liberar todos os horários daquele dia de uma vez.
+                <span className="text-primary font-medium">
+                  Coluna inteira (dia)
+                </span>{" "}
+                — clique no{" "}
+                <span className="font-semibold text-white/60">nome do dia</span>{" "}
+                no topo (SEG, TER…) para bloquear ou liberar todos os horários
+                daquele dia de uma vez.
               </li>
               <li>
-                <span className="text-primary font-medium">Linha inteira (hora)</span> — clique
-                no <span className="font-semibold text-white/60">horário lateral</span> (07h,
-                08h…) para bloquear ou liberar aquele horário em todos os dias da semana.
+                <span className="text-primary font-medium">
+                  Linha inteira (hora)
+                </span>{" "}
+                — clique no{" "}
+                <span className="font-semibold text-white/60">
+                  horário lateral
+                </span>{" "}
+                (07h, 08h…) para bloquear ou liberar aquele horário em todos os
+                dias da semana.
               </li>
               <li>
-                Slots <span className="text-red-400 font-medium">vermelhos</span> já foram
-                agendados e não podem ser alterados.
+                Slots{" "}
+                <span className="text-red-400 font-medium">vermelhos</span> já
+                foram agendados e não podem ser alterados.
               </li>
             </ul>
           </div>

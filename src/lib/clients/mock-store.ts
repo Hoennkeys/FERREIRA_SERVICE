@@ -129,7 +129,10 @@ class MockClientsStore implements ClientsStore {
     return { ok: true, id, claimToken: crypto.randomUUID() };
   }
 
-  async deleteOrder(id: string, _options?: { claimToken?: string }): Promise<void> {
+  async deleteOrder(
+    id: string,
+    _options?: { claimToken?: string },
+  ): Promise<void> {
     this.ensureInit();
     await rollbackReservasForPedido(id);
     this.state = {
@@ -142,7 +145,8 @@ class MockClientsStore implements ClientsStore {
     this.ensureInit();
     const client = this.state.clients.find((c) => c.id === id);
     if (!client) return { ok: false, reason: "not_found" };
-    if (client.status === "Ativo") return { ok: false, reason: "already_active" };
+    if (client.status === "Ativo")
+      return { ok: false, reason: "already_active" };
 
     if (client.slotIds.length === 0) {
       const booked = await bookSlotsBySchedule(
@@ -188,7 +192,8 @@ class MockClientsStore implements ClientsStore {
     this.ensureInit();
     const client = this.state.clients.find((c) => c.id === id);
     if (!client) return { ok: false, reason: "not_found" };
-    if (client.status !== "Ativo") return { ok: false, reason: "invalid_status" };
+    if (client.status !== "Ativo")
+      return { ok: false, reason: "invalid_status" };
 
     await releasePedidoReservas(id);
 
@@ -207,7 +212,8 @@ class MockClientsStore implements ClientsStore {
     this.ensureInit();
     const client = this.state.clients.find((c) => c.id === id);
     if (!client) return { ok: false, reason: "not_found" };
-    if (!isClosedStatus(client.status)) return { ok: false, reason: "not_closed" };
+    if (!isClosedStatus(client.status))
+      return { ok: false, reason: "not_closed" };
     await this.deleteOrder(id);
     return { ok: true };
   }

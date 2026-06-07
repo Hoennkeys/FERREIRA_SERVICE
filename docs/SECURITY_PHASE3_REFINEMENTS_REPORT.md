@@ -32,13 +32,13 @@ flowchart TB
   ci --> zap
 ```
 
-| Camada | Mecanismo |
-|--------|-----------|
+| Camada          | Mecanismo                                               |
+| --------------- | ------------------------------------------------------- |
 | Dados sensíveis | RLS `is_admin()` em `pedidos_cliente`, `dispatch_queue` |
-| Homepage | RPC security definer + `claim_token` + rate limit DB |
-| Painel | `requireAdmin`, `ProtectedRoute`, login com gate admin |
-| HTTP | HSTS, CSP report-only, headers em `vercel.json` |
-| Contínuo | Dependabot, audit CI, ZAP, runbooks, LGPD |
+| Homepage        | RPC security definer + `claim_token` + rate limit DB    |
+| Painel          | `requireAdmin`, `ProtectedRoute`, login com gate admin  |
+| HTTP            | HSTS, CSP report-only, headers em `vercel.json`         |
+| Contínuo        | Dependabot, audit CI, ZAP, runbooks, LGPD               |
 
 ---
 
@@ -46,37 +46,37 @@ flowchart TB
 
 ### 2.1 Auditoria de dependências
 
-| Artefato | Descrição |
-|----------|-----------|
-| [`.github/dependabot.yml`](../.github/dependabot.yml) | Updates semanais npm (grupos patch/minor) |
-| [`.github/workflows/security.yml`](../.github/workflows/security.yml) | CI: audit, testes, ZAP |
-| [`package.json`](../package.json) | Script `npm run audit:ci` |
-| [`.zap/rules.tsv`](../.zap/rules.tsv) | Falsos positivos ZAP (HSTS, CSP report-only) |
+| Artefato                                                              | Descrição                                    |
+| --------------------------------------------------------------------- | -------------------------------------------- |
+| [`.github/dependabot.yml`](../.github/dependabot.yml)                 | Updates semanais npm (grupos patch/minor)    |
+| [`.github/workflows/security.yml`](../.github/workflows/security.yml) | CI: audit, testes, ZAP                       |
+| [`package.json`](../package.json)                                     | Script `npm run audit:ci`                    |
+| [`.zap/rules.tsv`](../.zap/rules.tsv)                                 | Falsos positivos ZAP (HSTS, CSP report-only) |
 
 ### 2.2 Monitoramento e incidentes
 
-| Documento | Conteúdo |
-|-----------|----------|
-| [`docs/MONITORING.md`](MONITORING.md) | Queries SQL, thresholds, Realtime, logging, pg_cron |
-| [`docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md) | Contenção (revoke RPC), rotação de keys, comunicação LGPD |
-| [`docs/SECURITY_QUARTERLY_REVIEW.md`](SECURITY_QUARTERLY_REVIEW.md) | Checklist trimestral datado |
-| [`supabase/migrations/security_phase3_monitoring.sql`](../supabase/migrations/security_phase3_monitoring.sql) | View + RPC `get_admin_monitoring_stats()` |
+| Documento                                                                                                     | Conteúdo                                                  |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`docs/MONITORING.md`](MONITORING.md)                                                                         | Queries SQL, thresholds, Realtime, logging, pg_cron       |
+| [`docs/INCIDENT_RESPONSE.md`](INCIDENT_RESPONSE.md)                                                           | Contenção (revoke RPC), rotação de keys, comunicação LGPD |
+| [`docs/SECURITY_QUARTERLY_REVIEW.md`](SECURITY_QUARTERLY_REVIEW.md)                                           | Checklist trimestral datado                               |
+| [`supabase/migrations/security_phase3_monitoring.sql`](../supabase/migrations/security_phase3_monitoring.sql) | View + RPC `get_admin_monitoring_stats()`                 |
 
 ### 2.3 LGPD / privacidade
 
-| Artefato | Descrição |
-|----------|-----------|
-| [`src/routes/privacidade.tsx`](../src/routes/privacidade.tsx) | Política operacional (rascunho para revisão jurídica) |
-| [`src/components/landing/Footer.tsx`](../src/components/landing/Footer.tsx) | Link "Política de Privacidade" |
+| Artefato                                                                    | Descrição                                             |
+| --------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [`src/routes/privacidade.tsx`](../src/routes/privacidade.tsx)               | Política operacional (rascunho para revisão jurídica) |
+| [`src/components/landing/Footer.tsx`](../src/components/landing/Footer.tsx) | Link "Política de Privacidade"                        |
 
 ### 2.4 Código adicional (Fase 3 original)
 
-| Mudança | Arquivo |
-|---------|---------|
-| Admin gate no login | `login.tsx` — `isCurrentUserAdmin` antes de redirect |
-| Logging sem PII | `safe-log.ts` em `__root.tsx`, `server.ts`, `start.ts` |
-| CSP third party | `decapi.me` em `vercel.json` (`use-twitch-status.ts`) |
-| Checklist master | [`docs/SECURITY.md`](SECURITY.md) atualizado |
+| Mudança             | Arquivo                                                |
+| ------------------- | ------------------------------------------------------ |
+| Admin gate no login | `login.tsx` — `isCurrentUserAdmin` antes de redirect   |
+| Logging sem PII     | `safe-log.ts` em `__root.tsx`, `server.ts`, `start.ts` |
+| CSP third party     | `decapi.me` em `vercel.json` (`use-twitch-status.ts`)  |
+| Checklist master    | [`docs/SECURITY.md`](SECURITY.md) atualizado           |
 
 ---
 
@@ -134,8 +134,8 @@ permissions:
 zap-baseline:
   permissions:
     contents: read
-    actions: write   # upload-artifact
-    issues: write    # ZAP action (alertas futuros)
+    actions: write # upload-artifact
+    issues: write # ZAP action (alertas futuros)
 ```
 
 ---
@@ -144,43 +144,43 @@ zap-baseline:
 
 ### Fase 1 — Crítico
 
-| Item | Repo | Produção (manual) |
-|------|------|-------------------|
-| RLS + RPC homepage | ✅ | ⚠️ SQL + sign-up off |
-| Admin allowlist | ✅ | ⚠️ Confirmar e-mail |
-| Smoke tests | — | ⚠️ Pendente |
+| Item               | Repo | Produção (manual)    |
+| ------------------ | ---- | -------------------- |
+| RLS + RPC homepage | ✅   | ⚠️ SQL + sign-up off |
+| Admin allowlist    | ✅   | ⚠️ Confirmar e-mail  |
+| Smoke tests        | —    | ⚠️ Pendente          |
 
 ### Fase 2 — Importante
 
-| Item | Repo | Produção (manual) |
-|------|------|-------------------|
-| Headers + CSP report-only | ✅ | ✅ (Vercel) |
-| Rate limit + Turnstile | ✅ | ⚠️ Turnstile opcional |
-| Login redirect seguro | ✅ | ✅ |
-| Server fn + CSRF | ✅ | ✅ |
-| MFA admin | — | ⚠️ Dashboard |
+| Item                      | Repo | Produção (manual)     |
+| ------------------------- | ---- | --------------------- |
+| Headers + CSP report-only | ✅   | ✅ (Vercel)           |
+| Rate limit + Turnstile    | ✅   | ⚠️ Turnstile opcional |
+| Login redirect seguro     | ✅   | ✅                    |
+| Server fn + CSRF          | ✅   | ✅                    |
+| MFA admin                 | —    | ⚠️ Dashboard          |
 
 ### Fase 3 — Contínuo
 
-| Item | Repo | Operação |
-|------|------|----------|
-| Dependabot + audit CI | ✅ | CI após push |
-| MONITORING + INCIDENT | ✅ | Queries manuais |
-| `/privacidade` + LGPD nicho | ✅ | Revisão jurídica |
-| Revisão trimestral template | ✅ | Primeira entrada pendente |
-| ZAP semanal | ✅ | Artefato `zap-report` |
-| Monitoring SQL | ✅ | ⚠️ Aplicar migration |
-| Refinamentos login/safe-log/ZAP | ✅ | — |
+| Item                            | Repo | Operação                  |
+| ------------------------------- | ---- | ------------------------- |
+| Dependabot + audit CI           | ✅   | CI após push              |
+| MONITORING + INCIDENT           | ✅   | Queries manuais           |
+| `/privacidade` + LGPD nicho     | ✅   | Revisão jurídica          |
+| Revisão trimestral template     | ✅   | Primeira entrada pendente |
+| ZAP semanal                     | ✅   | Artefato `zap-report`     |
+| Monitoring SQL                  | ✅   | ⚠️ Aplicar migration      |
+| Refinamentos login/safe-log/ZAP | ✅   | —                         |
 
 ---
 
 ## 5. Testes executados
 
-| Comando | Resultado |
-|---------|-----------|
-| `npm run test:security` | ✅ 3/3 (safe-redirect) |
-| `npm run build` | ✅ (rota `/privacidade`, login) |
-| `npm run audit:ci` | ⚠️ Falha: `h3` high (transitiva TanStack) — esperado; Dependabot acompanha |
+| Comando                 | Resultado                                                                  |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `npm run test:security` | ✅ 3/3 (safe-redirect)                                                     |
+| `npm run build`         | ✅ (rota `/privacidade`, login)                                            |
+| `npm run audit:ci`      | ⚠️ Falha: `h3` high (transitiva TanStack) — esperado; Dependabot acompanha |
 
 ---
 
@@ -215,15 +215,15 @@ zap-baseline:
 
 ## 7. Arquivos alterados nesta sessão de refinamentos
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/lib/auth.ts` | `signOutAndClearSession()` |
-| `src/routes/login.tsx` | Anti-loop, confirmação pós-logout |
-| `src/components/auth/ProtectedRoute.tsx` | Usa helper de logout |
-| `src/lib/safe-log.ts` | Isomórfico + `char_nome` redacted |
-| `src/routes/privacidade.tsx` | Nicks, Twitch, legítimo interesse |
-| `.github/workflows/security.yml` | Permissões explícitas |
-| `docs/SECURITY_PHASE3_REFINEMENTS_REPORT.md` | Este relatório |
+| Arquivo                                      | Mudança                           |
+| -------------------------------------------- | --------------------------------- |
+| `src/lib/auth.ts`                            | `signOutAndClearSession()`        |
+| `src/routes/login.tsx`                       | Anti-loop, confirmação pós-logout |
+| `src/components/auth/ProtectedRoute.tsx`     | Usa helper de logout              |
+| `src/lib/safe-log.ts`                        | Isomórfico + `char_nome` redacted |
+| `src/routes/privacidade.tsx`                 | Nicks, Twitch, legítimo interesse |
+| `.github/workflows/security.yml`             | Permissões explícitas             |
+| `docs/SECURITY_PHASE3_REFINEMENTS_REPORT.md` | Este relatório                    |
 
 ---
 

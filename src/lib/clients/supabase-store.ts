@@ -167,14 +167,20 @@ class SupabaseClientsStore implements ClientsStore {
     return { ok: true, id, claimToken };
   }
 
-  async deleteOrder(id: string, options?: { claimToken?: string }): Promise<void> {
+  async deleteOrder(
+    id: string,
+    options?: { claimToken?: string },
+  ): Promise<void> {
     if (options?.claimToken) {
       const { error } = await supabase.rpc("rollback_pedido_homepage", {
         p_id: id,
         p_claim_token: options.claimToken,
       });
       if (error) {
-        console.warn("[clients] rollback_pedido_homepage error:", error.message);
+        console.warn(
+          "[clients] rollback_pedido_homepage error:",
+          error.message,
+        );
       }
       return;
     }
@@ -190,7 +196,8 @@ class SupabaseClientsStore implements ClientsStore {
   async approveClient(id: string): Promise<ApproveResult> {
     const client = this.state.clients.find((c) => c.id === id);
     if (!client) return { ok: false, reason: "not_found" };
-    if (client.status === "Ativo") return { ok: false, reason: "already_active" };
+    if (client.status === "Ativo")
+      return { ok: false, reason: "already_active" };
 
     const hasReservations = client.slotIds.length > 0 && client.semanaInicio;
 
@@ -238,7 +245,8 @@ class SupabaseClientsStore implements ClientsStore {
   async finalizeClient(id: string): Promise<FinalizeResult> {
     const client = this.state.clients.find((c) => c.id === id);
     if (!client) return { ok: false, reason: "not_found" };
-    if (client.status !== "Ativo") return { ok: false, reason: "invalid_status" };
+    if (client.status !== "Ativo")
+      return { ok: false, reason: "invalid_status" };
 
     await releasePedidoReservas(id);
 
@@ -259,7 +267,8 @@ class SupabaseClientsStore implements ClientsStore {
   async removeClosedClient(id: string): Promise<RemoveClosedResult> {
     const client = this.state.clients.find((c) => c.id === id);
     if (!client) return { ok: false, reason: "not_found" };
-    if (!isClosedStatus(client.status)) return { ok: false, reason: "not_closed" };
+    if (!isClosedStatus(client.status))
+      return { ok: false, reason: "not_closed" };
     await this.deleteOrder(id);
     return { ok: true };
   }

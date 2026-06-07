@@ -28,7 +28,9 @@ export function isExpiredClosedClient(
   return closedAt.getTime() < cutoff;
 }
 
-export function filterVisibleClients(clients: ContractClient[]): ContractClient[] {
+export function filterVisibleClients(
+  clients: ContractClient[],
+): ContractClient[] {
   return clients.filter((c) => !isExpiredClosedClient(c));
 }
 

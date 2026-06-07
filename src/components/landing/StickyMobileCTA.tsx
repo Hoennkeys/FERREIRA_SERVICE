@@ -26,7 +26,9 @@ export function StickyMobileCTA() {
   return (
     <div
       className={`fixed bottom-3 inset-x-3 z-40 md:hidden transition-all duration-300 ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+        visible
+          ? "opacity-100 translate-y-0"
+          : "opacity-0 translate-y-6 pointer-events-none"
       }`}
     >
       <a

@@ -15,7 +15,10 @@ type TurnstileRenderOptions = {
 declare global {
   interface Window {
     turnstile?: {
-      render: (container: HTMLElement, options: TurnstileRenderOptions) => string;
+      render: (
+        container: HTMLElement,
+        options: TurnstileRenderOptions,
+      ) => string;
       remove: (widgetId: string) => void;
       reset: (widgetId: string) => void;
     };
@@ -56,7 +59,11 @@ export function isTurnstileSiteKeyConfigured(): boolean {
   return Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim());
 }
 
-export function TurnstileWidget({ onToken, onExpire, onError }: TurnstileWidgetProps) {
+export function TurnstileWidget({
+  onToken,
+  onExpire,
+  onError,
+}: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim();
 

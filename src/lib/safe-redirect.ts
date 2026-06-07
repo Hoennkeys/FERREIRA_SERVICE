@@ -8,9 +8,7 @@ const ALLOWED_AUTH_PREFIXES = ["/dispatch"] as const;
  * Sanitiza redirect pós-login contra open redirect.
  * Aceita apenas paths internos na allowlist (ex.: /dispatch).
  */
-export function sanitizeRedirectPath(
-  input: string | undefined | null,
-): string {
+export function sanitizeRedirectPath(input: string | undefined | null): string {
   if (!input || typeof input !== "string") {
     return DEFAULT_AUTH_REDIRECT;
   }

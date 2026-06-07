@@ -90,8 +90,12 @@ async function main() {
     console.log(`  Título: ${stream.title}`);
     console.log(`  Viewers: ${stream.viewer_count}`);
   } else {
-    console.log("OK — credenciais válidas, mas o canal NÃO está ao vivo agora.");
-    console.log("  Entre na Twitch e rode de novo, ou teste a homepage quando estiver live.");
+    console.log(
+      "OK — credenciais válidas, mas o canal NÃO está ao vivo agora.",
+    );
+    console.log(
+      "  Entre na Twitch e rode de novo, ou teste a homepage quando estiver live.",
+    );
   }
 
   process.exit(0);

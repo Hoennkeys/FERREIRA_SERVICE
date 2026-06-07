@@ -1,9 +1,20 @@
 import { Reveal } from "./Reveal";
 
 const metrics = [
-  { value: "REFERÊNCIA NO MERCADO", label: "Garantia de integridade e autenticação protegida, mais de 50 referências em todos os grupos de trades." },
-  { value: "MINIMO DE PREJUIZO", label: "Histórico impecável de expedições com taxa minima de mortes." },
-  { value: "ECOSISTEMA ATIVO 24/7", label: "Hub ativo para monitoramento, evolução contínua, atendimento via whatsapp 24/7 e toda a segurança para o seu personagem." },
+  {
+    value: "REFERÊNCIA NO MERCADO",
+    label:
+      "Garantia de integridade e autenticação protegida, mais de 50 referências em todos os grupos de trades.",
+  },
+  {
+    value: "MINIMO DE PREJUIZO",
+    label: "Histórico impecável de expedições com taxa minima de mortes.",
+  },
+  {
+    value: "ECOSISTEMA ATIVO 24/7",
+    label:
+      "Hub ativo para monitoramento, evolução contínua, atendimento via whatsapp 24/7 e toda a segurança para o seu personagem.",
+  },
 ];
 
 export function MetricsStrip() {
@@ -17,7 +28,9 @@ export function MetricsStrip() {
                 <div className="text-base sm:text-lg font-semibold tracking-wide text-primary drop-shadow-[0_0_10px_rgba(0,149,255,0.4)]">
                   {m.value}
                 </div>
-                <p className="mt-2 text-xs sm:text-sm text-white/55 leading-relaxed">{m.label}</p>
+                <p className="mt-2 text-xs sm:text-sm text-white/55 leading-relaxed">
+                  {m.label}
+                </p>
               </div>
             </Reveal>
           ))}
