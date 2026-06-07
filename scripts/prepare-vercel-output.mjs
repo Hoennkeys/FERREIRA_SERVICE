@@ -12,6 +12,30 @@ const funcRoot = join(root, ".vercel", "output", "functions", "__server.func");
 const staticRoot = join(root, ".vercel", "output", "static");
 const configPath = join(root, ".vercel", "output", "config.json");
 
+/** Nitro/Vite may bundle h3 as `h3.mjs` or `h3+rou3+srvx.mjs` — resolve at build time. */
+function resolveHttpResponseImport(funcRoot) {
+  const libsDir = join(funcRoot, "_libs");
+  if (!existsSync(libsDir)) return null;
+
+  for (const file of readdirSync(libsDir)) {
+    if (!file.endsWith(".mjs") || !file.includes("h3")) continue;
+
+    const content = readFileSync(join(libsDir, file), "utf-8");
+    if (!content.includes("HTTPResponse")) continue;
+
+    const exportLine = content.match(/export\s*\{([^}]+)\}/)?.[1] ?? "";
+    const alias = exportLine.match(/HTTPResponse as (\w+)/)?.[1];
+    if (alias) {
+      return `import { ${alias} as HTTPResponse } from "../_libs/${file}";`;
+    }
+    if (exportLine.includes("HTTPResponse")) {
+      return `import { HTTPResponse } from "../_libs/${file}";`;
+    }
+  }
+
+  return null;
+}
+
 // ─── 1. Remove static index.html ────────────────────────────────────────────
 // Vercel's "handle: filesystem" would serve the raw index.html shell (no
 // bundled scripts) before the SSR function gets a chance to render the page.
@@ -43,17 +67,28 @@ if (existsSync(chunksDir)) {
 
 if (rendererPath) {
   const original = readFileSync(rendererPath, "utf-8");
-  // Only patch if it's the static fallback (does not already call __nitro_vite_envs__)
-  if (!original.includes("__nitro_vite_envs__")) {
-    // Extract the h3 import line so we keep the same h3 reference
-    const h3Import =
-      original.match(/^import \{ .* \} from ".*_libs\/h3\.mjs";/m)?.[0] ?? "";
-    const fallbackHtml =
-      original.match(/new HTTPResponse\('([\s\S]*?)',\s*\{/)?.[1] ?? "";
-    const patched = `${h3Import}
-import "../_libs/rou3.mjs";
-import "../_libs/srvx.mjs";
-import "node:stream";
+  const hasBrokenSideImports =
+    original.includes("../_libs/rou3.mjs") &&
+    !existsSync(join(funcRoot, "_libs", "rou3.mjs"));
+  const needsPatch =
+    !original.includes("__nitro_vite_envs__") || hasBrokenSideImports;
+
+  if (needsPatch) {
+    const httpResponseImport = resolveHttpResponseImport(funcRoot);
+    if (!httpResponseImport) {
+      console.warn(
+        "⚠️  Could not resolve HTTPResponse import — skipping SSR patch.",
+      );
+    } else {
+      const fallbackHtml =
+        original.match(/new HTTPResponse\('([\s\S]*?)',\s*\{/)?.[1] ??
+        original.match(/new HTTPResponse\("([\s\S]*?)",\s*\{/)?.[1] ??
+        "";
+      const fallbackLiteral =
+        fallbackHtml && !fallbackHtml.startsWith("JSON.stringify")
+          ? fallbackHtml
+          : "<!DOCTYPE html><html><body><div id='root'></div></body></html>";
+      const patched = `${httpResponseImport}
 
 async function renderIndexHTML(event) {
   const ssr = globalThis.__nitro_vite_envs__?.ssr;
@@ -65,13 +100,14 @@ async function renderIndexHTML(event) {
     }
   }
   // Fallback: bare shell so the browser at least gets a parseable document
-  return new HTTPResponse(${JSON.stringify(fallbackHtml || "<!DOCTYPE html><html><body><div id='root'></div></body></html>")},
+  return new HTTPResponse(${JSON.stringify(fallbackLiteral)},
     { headers: { "content-type": "text/html; charset=utf-8" } });
 }
 export { renderIndexHTML as default };
 `;
-    writeFileSync(rendererPath, patched, "utf-8");
-    console.log(`✅ Patched ${rendererPath} to call SSR service.`);
+      writeFileSync(rendererPath, patched, "utf-8");
+      console.log(`✅ Patched ${rendererPath} to call SSR service.`);
+    }
   } else {
     console.log(
       "ℹ️  renderer-template.mjs already calls SSR service — no patch needed.",
