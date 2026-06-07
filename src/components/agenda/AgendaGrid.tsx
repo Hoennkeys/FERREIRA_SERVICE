@@ -312,6 +312,38 @@ export function AgendaGrid({
 
   if (loading) return <GridSkeleton mode={mode} />;
 
+  if (slots.length === 0) {
+    return (
+      <div
+        className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-5 text-sm text-amber-100"
+        role="alert"
+      >
+        <p className="font-medium text-amber-200">
+          {mode === "admin"
+            ? "Agenda sem horários cadastrados"
+            : "Nenhum horário disponível no momento"}
+        </p>
+        <p className="mt-2 text-xs leading-relaxed text-amber-100/85">
+          {mode === "admin" ? (
+            <>
+              A tabela{" "}
+              <code className="text-amber-50">disponibilidade_agenda</code> está
+              vazia. Execute{" "}
+              <code className="text-amber-50">npm run db:setup</code> ou cole{" "}
+              <code className="text-amber-50">supabase/setup.sql</code> no SQL
+              Editor do Supabase para criar os 105 slots (7 dias × 15 horas).
+            </>
+          ) : (
+            <>
+              A agenda ainda não foi configurada pelo operador. Tente novamente
+              mais tarde ou entre em contato pelo WhatsApp.
+            </>
+          )}
+        </p>
+      </div>
+    );
+  }
+
   const isAdmin = mode === "admin";
 
   const desktopGrid = (
