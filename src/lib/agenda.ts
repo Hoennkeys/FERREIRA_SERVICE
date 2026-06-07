@@ -239,7 +239,13 @@ export async function fetchAgenda(): Promise<AgendaSlot[]> {
     console.warn("[agenda] fetchAgenda error:", error.message);
     return [];
   }
-  return (data ?? []) as AgendaSlot[];
+  const rows = (data ?? []) as AgendaSlot[];
+  if (rows.length === 0) {
+    console.warn(
+      "[agenda] disponibilidade_agenda vazia — execute supabase/setup.sql ou npm run db:setup",
+    );
+  }
+  return rows;
 }
 
 export async function fetchReservasForWeek(
