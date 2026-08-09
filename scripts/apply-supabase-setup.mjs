@@ -92,10 +92,11 @@ async function applyViaManagementApi(projectRef, accessToken, sql) {
 
 function applyViaSupabaseCli(sqlPath) {
   console.log("Tentando Supabase CLI (npx supabase login + link no projeto)…");
+  const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
   const result = spawnSync(
-    "npx",
+    cmd,
     ["supabase", "db", "query", "-f", sqlPath, "--linked", "--yes"],
-    { cwd: root, stdio: "inherit", shell: true },
+    { cwd: root, stdio: "inherit" },
   );
   return result.status === 0;
 }
