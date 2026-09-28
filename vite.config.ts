@@ -4,7 +4,6 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import react from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 /** Local dev/preview port only — production on Vercel is unaffected. */
 const DEV_PORT = 5173;
@@ -15,12 +14,12 @@ export default defineConfig(({ command }) => ({
     ...(command === "build" ? [nitro({ preset: "vercel" })] : []),
     react(),
     tailwindcss(),
-    tsconfigPaths(),
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
+    tsconfigPaths: true,
   },
   server: {
     host: true,

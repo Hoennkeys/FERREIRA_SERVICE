@@ -24,7 +24,7 @@ export type OnboardingGateResult =
 
 /** Rate limit + Turnstile antes de criar pedido na homepage. */
 export const verifyOnboardingGate = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     z.object({
       turnstileToken: z.string().min(1).optional(),
       /** Honeypot — deve permanecer vazio. */

@@ -41,6 +41,21 @@ export function PanelSidebar({ activeTab, onTabChange }: PanelSidebarProps) {
   ).length;
 
   useEffect(() => {
+    if (import.meta.env.VITE_AUTH_MODE === "dev") {
+      const raw = localStorage.getItem("ferreira-dev-session");
+      if (raw) {
+        try {
+          const session = JSON.parse(raw);
+          setOperatorEmail(session?.user?.email ?? "dev@ferreiranavoz.com");
+        } catch {
+          setOperatorEmail("dev@ferreiranavoz.com");
+        }
+      } else {
+        setOperatorEmail("dev@ferreiranavoz.com");
+      }
+      return;
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       setOperatorEmail(data.session?.user?.email ?? null);
     });
@@ -48,6 +63,11 @@ export function PanelSidebar({ activeTab, onTabChange }: PanelSidebarProps) {
 
   async function handleSignOut() {
     setSigningOut(true);
+    if (import.meta.env.VITE_AUTH_MODE === "dev") {
+      localStorage.removeItem("ferreira-dev-session");
+      navigate({ to: "/login", replace: true });
+      return;
+    }
     await supabase.auth.signOut();
     navigate({ to: "/login", replace: true });
   }

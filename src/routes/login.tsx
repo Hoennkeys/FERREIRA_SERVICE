@@ -67,7 +67,7 @@ function LoginPage() {
   const [envMisconfigured, setEnvMisconfigured] = useState(false);
 
   useEffect(() => {
-    setEnvMisconfigured(!isSupabaseConfigured());
+    setEnvMisconfigured(!isSupabaseConfigured() && import.meta.env.VITE_AUTH_MODE !== "dev");
 
     if (sessionCheckStarted.current) return;
 
@@ -130,6 +130,26 @@ function LoginPage() {
     setError(null);
 
     setSubmitting(true);
+
+    if (import.meta.env.VITE_AUTH_MODE === "dev") {
+      if (!email.trim() || !password) {
+        setError("Por favor, preencha todos os campos.");
+        setSubmitting(false);
+        return;
+      }
+      const mockSession = {
+        access_token: "mock-token",
+        user: {
+          id: "mock-uid",
+          email: email.trim(),
+          role: "authenticated",
+        },
+      };
+      localStorage.setItem("ferreira-dev-session", JSON.stringify(mockSession));
+      setSubmitting(false);
+      navigate({ to: redirectTo ?? DEFAULT_AUTH_REDIRECT, replace: true });
+      return;
+    }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -202,6 +222,14 @@ function LoginPage() {
             Configure <span className="font-mono">VITE_SUPABASE_URL</span> e{" "}
             <span className="font-mono">VITE_SUPABASE_ANON_KEY</span> no arquivo{" "}
             <span className="font-mono">.env</span> e reinicie o servidor.
+          </p>
+        )}
+
+        {import.meta.env.VITE_AUTH_MODE === "dev" && (
+          <p className="mb-6 rounded-lg border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-xs text-blue-300">
+            🔧 <strong>Modo de Desenvolvimento Ativado</strong>
+            <br />
+            Autenticação via Supabase ignorada. Use qualquer e-mail/senha.
           </p>
         )}
 

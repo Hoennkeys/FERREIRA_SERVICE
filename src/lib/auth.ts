@@ -5,6 +5,16 @@ import { sanitizeRedirectPath } from "./safe-redirect";
 import { supabase } from "./supabase";
 
 export async function getActiveSession(): Promise<Session | null> {
+  if (import.meta.env.VITE_AUTH_MODE === "dev") {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("ferreira-dev-session");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as Session;
+    } catch {
+      return null;
+    }
+  }
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
@@ -14,6 +24,12 @@ export async function getActiveSession(): Promise<Session | null> {
  * Evita race onde getSession() ainda retorna JWT logo após signOut.
  */
 export async function signOutAndClearSession(): Promise<void> {
+  if (import.meta.env.VITE_AUTH_MODE === "dev") {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("ferreira-dev-session");
+    }
+    return;
+  }
   await supabase.auth.signOut();
   const { data } = await supabase.auth.getSession();
   if (data.session) {
@@ -22,6 +38,10 @@ export async function signOutAndClearSession(): Promise<void> {
 }
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
+  if (import.meta.env.VITE_AUTH_MODE === "dev") {
+    const session = await getActiveSession();
+    return session !== null;
+  }
   const { data, error } = await supabase.rpc("check_is_admin");
   if (error) {
     console.warn("[auth] check_is_admin:", error.message);

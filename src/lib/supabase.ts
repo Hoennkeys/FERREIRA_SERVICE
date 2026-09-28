@@ -4,11 +4,14 @@ const url = import.meta.env.VITE_SUPABASE_URL;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export function isSupabaseConfigured(): boolean {
+  if (import.meta.env.VITE_AUTH_MODE === "dev") {
+    return false;
+  }
   return Boolean(
     url &&
-    anonKey &&
-    !url.includes("your-project") &&
-    !anonKey.includes("your-anon-key"),
+      anonKey &&
+      !url.includes("your-project") &&
+      !anonKey.includes("your-anon-key"),
   );
 }
 

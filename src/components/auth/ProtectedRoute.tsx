@@ -41,6 +41,33 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       setLoading(false);
     }
 
+    if (import.meta.env.VITE_AUTH_MODE === "dev") {
+      const getDevSession = () => {
+        if (typeof window === "undefined") return null;
+        const raw = localStorage.getItem("ferreira-dev-session");
+        if (!raw) return null;
+        try {
+          return JSON.parse(raw) as Session;
+        } catch {
+          return null;
+        }
+      };
+
+      void verify(getDevSession());
+
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === "ferreira-dev-session") {
+          void verify(getDevSession());
+        }
+      };
+
+      window.addEventListener("storage", handleStorage);
+      return () => {
+        mounted = false;
+        window.removeEventListener("storage", handleStorage);
+      };
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       void verify(data.session);
     });
