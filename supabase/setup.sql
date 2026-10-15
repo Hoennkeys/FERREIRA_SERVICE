@@ -123,14 +123,17 @@ create policy "agenda_update_admin"
   using (public.is_admin())
   with check (public.is_admin());
 
+drop policy if exists "pedidos_select_admin" on pedidos_cliente;
 create policy "pedidos_select_admin"
   on pedidos_cliente for select to authenticated
   using (public.is_admin());
 
+drop policy if exists "pedidos_update_admin" on pedidos_cliente;
 create policy "pedidos_update_admin"
   on pedidos_cliente for update to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "pedidos_delete_admin" on pedidos_cliente;
 create policy "pedidos_delete_admin"
   on pedidos_cliente for delete to authenticated
   using (public.is_admin());
@@ -151,17 +154,21 @@ $$;
 revoke all on function public.pedido_allows_homepage_reserva(uuid) from public;
 grant execute on function public.pedido_allows_homepage_reserva(uuid) to anon, authenticated;
 
+drop policy if exists "reservas_select_public" on reservas_semana;
 create policy "reservas_select_public"
   on reservas_semana for select using (true);
 
+drop policy if exists "reservas_insert_homepage" on reservas_semana;
 create policy "reservas_insert_homepage"
   on reservas_semana for insert to anon, authenticated
   with check (public.pedido_allows_homepage_reserva(pedido_id));
 
+drop policy if exists "reservas_update_admin" on reservas_semana;
 create policy "reservas_update_admin"
   on reservas_semana for update to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "reservas_delete_admin" on reservas_semana;
 create policy "reservas_delete_admin"
   on reservas_semana for delete to authenticated
   using (public.is_admin());
