@@ -3,6 +3,7 @@ import { useState } from "react";
 import { PanelSidebar } from "./PanelSidebar";
 import { AgendaTab } from "./tabs/AgendaTab";
 import { ClientsTab } from "./tabs/ClientsTab";
+import { HuntTab } from "./tabs/HuntTab";
 import { TelemetryTab } from "./tabs/TelemetryTab";
 import { WhatsAppTab } from "./tabs/WhatsAppTab";
 import type { PanelTab } from "./types";
@@ -24,6 +25,7 @@ export function PanelLayout() {
           {activeTab === "agenda" && <AgendaTab />}
           {activeTab === "whatsapp" && <WhatsAppTab />}
           {activeTab === "clients" && <ClientsTab />}
+          {activeTab === "hunt" && <HuntTab />}
         </div>
       </main>
     </div>

@@ -1,4 +1,4 @@
-export type PanelTab = "telemetry" | "agenda" | "whatsapp" | "clients";
+export type PanelTab = "telemetry" | "agenda" | "whatsapp" | "clients" | "hunt";
 
 export const PANEL_TABS: {
   id: PanelTab;
@@ -8,4 +8,5 @@ export const PANEL_TABS: {
   { id: "agenda", label: "Agenda" },
   { id: "whatsapp", label: "WhatsApp" },
   { id: "clients", label: "Clientes" },
+  { id: "hunt", label: "Controle" },
 ];

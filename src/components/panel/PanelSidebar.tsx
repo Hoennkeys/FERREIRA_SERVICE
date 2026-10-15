@@ -6,6 +6,7 @@ import {
   ExternalLink,
   LogOut,
   MessageSquare,
+  Swords,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -23,6 +24,7 @@ const TAB_ICONS: Record<PanelTab, LucideIcon> = {
   agenda: CalendarDays,
   whatsapp: MessageSquare,
   clients: Users,
+  hunt: Swords,
 };
 
 type PanelSidebarProps = {
